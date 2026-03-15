@@ -15,12 +15,12 @@ jobs:
         include:
           - arch: arm64
             clang: aarch64-linux-android21-clang
-            output: libluajit-arm64.a
+            output: libluajit-64.a
             extra: "-DLUAJIT_ENABLE_GC64"
             hostcc: "gcc"
           - arch: armv7
             clang: armv7a-linux-androideabi21-clang
-            output: libluajit-armv7.a
+            output: libluajit-v7.a
             extra: ""
             hostcc: "gcc -m32"
           - arch: x86
@@ -34,12 +34,9 @@ jobs:
             extra: "-DLUAJIT_ENABLE_GC64"
             hostcc: "gcc"
 
-    name: Build ({{ matrix.arch }})
+    name: Build ( ${{ matrix.arch }} )
 
     steps:
-      - name: Checkout repo
-        uses: actions/checkout@v4
-
       - name: Checkout LuaJIT
         uses: actions/checkout@v4
         with:
@@ -59,26 +56,26 @@ jobs:
       - name: Add NDK toolchain to PATH
         run: echo "$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin" >> $GITHUB_PATH
 
-      - name: Build LuaJIT static (${{ matrix.arch }})
+      - name: Build LuaJIT (${{ matrix.arch }})
         run: |
           cd luajit/src
           make clean
-          make libluajit.a \
+          make \
             HOST_CC="${{ matrix.hostcc }}" \
             CC="${{ matrix.clang }}" \
             TARGET_SYS=Linux \
             TARGET_FLAGS="-fPIC" \
-            XCFLAGS="${{ matrix.extra }}" \
-            BUILDMODE=static \
-            TARGET_STRIP=""
+            TARGET_STRIP="true" \
+            XCFLAGS="${{ matrix.extra }}"
           mkdir -p ../../lib/lua/lib/Android
           cp libluajit.a ../../lib/lua/lib/Android/${{ matrix.output }}
 
-      - name: Commit built libraries
+      - name: Commit built library
         uses: EndBug/add-and-commit@v9
         with:
           author_name: github-actions
           author_email: github-actions@github.com
           message: "Add LuaJIT static library ${{ matrix.output }}"
           add: "lib/lua/lib/Android/${{ matrix.output }}"
+          new_branch: "lua-libs"
           push: true
