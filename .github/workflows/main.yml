@@ -11,25 +11,21 @@ jobs:
       matrix:
         include:
           - arch: arm64
-            cross: aarch64-linux-android-
             target: aarch64-linux-android21
             output: libluajit-64.a
             extra: "-DLUAJIT_ENABLE_GC64"
 
           - arch: armv7
-            cross: arm-linux-androideabi-
             target: armv7a-linux-androideabi21
             output: libluajit-v7.a
             extra: ""
 
           - arch: x86
-            cross: i686-linux-android-
             target: i686-linux-android21
             output: libluajit-x86.a
             extra: ""
 
           - arch: x86_64
-            cross: x86_64-linux-android-
             target: x86_64-linux-android21
             output: libluajit-x86_64.a
             extra: ""
@@ -37,18 +33,19 @@ jobs:
     name: build (${{ matrix.arch }})
 
     steps:
+
     - name: Checkout LuaJIT
       uses: actions/checkout@v4
       with:
         repository: LuaJIT/LuaJIT
         path: luajit
 
-    - name: Install Android NDK
+    - name: Install Android NDK r21
       uses: nttld/setup-ndk@v1
       with:
-        ndk-version: r27
+        ndk-version: r21
 
-    - name: Prepare toolchain
+    - name: Add NDK clang to PATH
       run: |
         echo "$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin" >> $GITHUB_PATH
 
@@ -56,12 +53,13 @@ jobs:
       run: |
         cd luajit
         make clean
+
         make \
           HOST_CC="gcc" \
-          CROSS=${{ matrix.cross }} \
+          CC="${{ matrix.target }}-clang" \
           TARGET_SYS=Linux \
           TARGET_FLAGS="-fPIC" \
-          TARGET_CFLAGS="--target=${{ matrix.target }} ${{ matrix.extra }}"
+          XCFLAGS="${{ matrix.extra }}"
 
         cp src/libluajit.a ../${{ matrix.output }}
 
