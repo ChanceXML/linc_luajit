@@ -28,10 +28,10 @@ extern class LuaL {
     static function error(l:State, fmt:String) : Int;
 
     @:native('linc::lual::checklstring')
-    static function checklstring(l:State, narg:Int, l:UInt) : String;
+    static function checklstring(l:State, narg:Int, len:UInt) : String;
 
     @:native('linc::lual::optlstring')
-    static function optlstring(l:State, narg:Int, d:String, l:UInt) : String;
+    static function optlstring(l:State, narg:Int, d:String, len:UInt) : String;
 
     @:native('luaL_checknumber')
     static function checknumber(l:State, narg:Int) : Float;
