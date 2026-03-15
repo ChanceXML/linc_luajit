@@ -2,6 +2,8 @@ name: Build LuaJIT Android
 
 on:
   push:
+    branches:
+      - main
   workflow_dispatch:
 
 jobs:
@@ -15,25 +17,22 @@ jobs:
             clang: aarch64-linux-android21-clang
             output: libluajit-arm64.a
             extra: "-DLUAJIT_ENABLE_GC64"
-            hostcc: gcc
-
+            hostcc: "gcc"
           - arch: armv7
             clang: armv7a-linux-androideabi21-clang
             output: libluajit-armv7.a
             extra: ""
             hostcc: "gcc -m32"
-
           - arch: x86
             clang: i686-linux-android21-clang
             output: libluajit-x86.a
             extra: ""
             hostcc: "gcc -m32"
-
           - arch: x86_64
             clang: x86_64-linux-android21-clang
             output: libluajit-x86_64.a
             extra: "-DLUAJIT_ENABLE_GC64"
-            hostcc: gcc
+            hostcc: "gcc"
 
     steps:
       - name: Checkout LuaJIT
@@ -55,23 +54,26 @@ jobs:
       - name: Add NDK toolchain to PATH
         run: echo "$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin" >> $GITHUB_PATH
 
-      - name: Build LuaJIT static library (${{ matrix.arch }})
+      - name: Build LuaJIT (${{ matrix.arch }})
         run: |
           cd luajit/src
           make clean
-          make HOST_CC="${{ matrix.hostcc }}" \
-               CC="${{ matrix.clang }}" \
-               TARGET_SYS=Linux \
-               TARGET_FLAGS="-fPIC" \
-               XCFLAGS="${{ matrix.extra }}" \
-               BUILDMODE=static
+          make \
+            HOST_CC="${{ matrix.hostcc }}" \
+            CC="${{ matrix.clang }}" \
+            TARGET_SYS=Linux \
+            TARGET_FLAGS="-fPIC" \
+            XCFLAGS="${{ matrix.extra }}" \
+            TARGET_STRIP=""   # Skip stripping, important for .a
           mkdir -p ../../lib/lua/lib/Android
           cp libluajit.a ../../lib/lua/lib/Android/${{ matrix.output }}
 
-      - name: Commit LuaJIT static libraries
+      - name: Commit built libraries
         uses: EndBug/add-and-commit@v9
         with:
           author_name: github-actions
           author_email: github-actions@github.com
-          message: "Add LuaJIT static libraries"
-          add: "lib/lua/lib/Android/*"
+          message: "Add LuaJIT static library ${{ matrix.output }}"
+          add: "lib/lua/lib/Android/${{ matrix.output }}"
+          branch: main
+          push: true
