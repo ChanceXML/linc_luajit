@@ -2,11 +2,14 @@ name: Build LuaJIT Android
 
 on:
   push:
+    branches:
+      - main
   workflow_dispatch:
 
 jobs:
   build:
     runs-on: ubuntu-latest
+
     strategy:
       matrix:
         include:
@@ -17,7 +20,7 @@ jobs:
             hostcc: "gcc"
           - arch: armv7
             clang: armv7a-linux-androideabi21-clang
-            output: libluajit-v7.a
+            output: libluajit-armv7.a
             extra: ""
             hostcc: "gcc -m32"
           - arch: x86
@@ -30,8 +33,6 @@ jobs:
             output: libluajit-x86_64.a
             extra: "-DLUAJIT_ENABLE_GC64"
             hostcc: "gcc"
-
-    name: Build (${{ matrix.arch }})
 
     steps:
       - name: Checkout LuaJIT
@@ -58,7 +59,7 @@ jobs:
         run: |
           cd luajit/src
           make clean
-          make \
+          make libluajit.a \
             HOST_CC="${{ matrix.hostcc }}" \
             CC="${{ matrix.clang }}" \
             TARGET_SYS=Linux \
@@ -69,11 +70,11 @@ jobs:
           mkdir -p ../../lib/lua/lib/Android
           cp libluajit.a ../../lib/lua/lib/Android/${{ matrix.output }}
 
-      - name: Commit and push LuaJIT .a
+      - name: Commit built libraries
         uses: EndBug/add-and-commit@v9
         with:
           author_name: github-actions
           author_email: github-actions@github.com
-          message: "Add LuaJIT static library ${{ matrix.output }}"
+          message: Add LuaJIT static library ${{ matrix.output }}
           add: "lib/lua/lib/Android/${{ matrix.output }}"
           branch: main
