@@ -1,6 +1,7 @@
 name: Build LuaJIT Android
 
 on:
+  push:
   workflow_dispatch:
 
 jobs:
@@ -19,14 +20,21 @@ jobs:
       with:
         ndk-version: r25c
 
-    - name: Build ARMv7
+    - name: Build ARMv7 LuaJIT
       run: |
-        cd luajit
-        make clean
-        make HOST_CC="gcc" \
-             CROSS=arm-linux-androideabi- \
-             TARGET_SYS=Linux \
-             TARGET_FLAGS="-fPIC"
+       cd luajit
+       export NDK=$ANDROID_NDK_HOME
+       export TOOLCHAIN=$NDK/toolchains/llvm/prebuilt/linux-x86_64
+       export TARGET=armv7a-linux-androideabi21
+
+       make clean
+
+       make \
+         HOST_CC="gcc" \
+         CC="$TOOLCHAIN/bin/${TARGET}-clang" \
+         CROSS="$TOOLCHAIN/bin/arm-linux-androideabi-" \
+         TARGET_SYS=Linux \
+         TARGET_FLAGS="-fPIC"
 
     - name: Upload artifact
       uses: actions/upload-artifact@v4
