@@ -9,7 +9,7 @@ This library works with the Haxe cpp target only.
 
 ---
 
-This Is Modified To Work For Android (ARMV7/ARM64)
+This Is Modified To Work For Android
 
 ---
 
