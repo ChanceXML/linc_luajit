@@ -2,7 +2,6 @@ name: Build LuaJIT Android
 
 on:
   push:
-  workflow_dispatch:
 
 jobs:
   build:
@@ -15,11 +14,13 @@ jobs:
             clang: aarch64-linux-android21-clang
             output: libluajit-64.a
             extra: "-DLUAJIT_ENABLE_GC64"
+            hostcc: "gcc"
 
           - arch: armv7
             clang: armv7a-linux-androideabi21-clang
             output: libluajit-v7.a
             extra: ""
+            hostcc: "gcc -m32"
 
     name: build (${{ matrix.arch }})
 
@@ -31,12 +32,17 @@ jobs:
           repository: LuaJIT/LuaJIT
           path: luajit
 
+      - name: Install dependencies
+        run: |
+          sudo apt update
+          sudo apt install gcc-multilib g++-multilib -y
+
       - name: Install Android NDK r21
         uses: nttld/setup-ndk@v1
         with:
           ndk-version: r21
 
-      - name: Add toolchain to PATH
+      - name: Add NDK clang to PATH
         run: |
           echo "$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin" >> $GITHUB_PATH
 
@@ -46,7 +52,7 @@ jobs:
           make clean
 
           make \
-            HOST_CC="gcc" \
+            HOST_CC="${{ matrix.hostcc }}" \
             CC="${{ matrix.clang }}" \
             TARGET_SYS=Linux \
             TARGET_FLAGS="-fPIC" \
