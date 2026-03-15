@@ -47,7 +47,7 @@ jobs:
       - name: Install build dependencies
         run: |
           sudo apt update
-          sudo apt install -y gcc-multilib g++-multilib make
+          sudo apt install -y gcc-multilib g++-multilib make unzip
 
       - name: Install Android NDK r21
         uses: nttld/setup-ndk@v1
@@ -72,6 +72,13 @@ jobs:
             XCFLAGS="${{ matrix.extra }}"
 
           cp libluajit.a ../../${{ matrix.output }}
+
+      - name: Extract LuaJIT .zip files to lib/lua/lib/Android
+        run: |
+          mkdir -p lib/lua/lib/Android
+          for zip in ./path/to/zips/*.zip; do
+            unzip -o "$zip" -d lib/lua/lib/Android
+          done
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
