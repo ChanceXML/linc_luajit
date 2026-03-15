@@ -67,7 +67,7 @@ jobs:
               BUILDMODE=static
          mkdir -p ../../lib/lua/lib/Android
          cp libluajit.a ../../lib/lua/lib/Android/${{ matrix.output }}
-
+    
       - name: Commit and push .a files
         uses: EndBug/add-and-commit@v9
         with:
