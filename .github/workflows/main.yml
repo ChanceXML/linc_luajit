@@ -4,7 +4,6 @@ on:
   push:
     branches:
       - main
-  workflow_dispatch:
 
 jobs:
   build:
@@ -33,14 +32,14 @@ jobs:
             extra: "-DLUAJIT_ENABLE_GC64"
             hostcc: "gcc"
 
-    name: Build ( ${{ matrix.arch }} )
+    name: Build (${{ matrix.arch }})
     steps:
       - uses: actions/checkout@v4
+        with:
+          repository: LuaJIT/LuaJIT
+          path: luajit
 
-      - name: Install dependencies
-        run: |
-          sudo apt update
-          sudo apt install -y gcc-multilib g++-multilib make
+      - run: sudo apt update && sudo apt install -y gcc-multilib g++-multilib make
 
       - uses: nttld/setup-ndk@v1
         with:
@@ -48,17 +47,16 @@ jobs:
 
       - run: echo "$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin" >> $GITHUB_PATH
 
-      - name: Build LuaJIT ${{ matrix.arch }}
+      - name: Build LuaJIT (${{ matrix.arch }})
         run: |
           cd luajit/src
           make clean
-          make \
-            HOST_CC="${{ matrix.hostcc }}" \
-            CC="${{ matrix.clang }}" \
-            TARGET_SYS=Linux \
-            TARGET_FLAGS="-fPIC" \
-            TARGET_STRIP="true" \
-            XCFLAGS="${{ matrix.extra }}"
+          make HOST_CC="${{ matrix.hostcc }}" \
+               CC="${{ matrix.clang }}" \
+               TARGET_SYS=Linux \
+               TARGET_FLAGS="-fPIC" \
+               TARGET_STRIP="true" \
+               XCFLAGS="${{ matrix.extra }}"
           mkdir -p ../../output
           cp libluajit.a ../../output/${{ matrix.output }}
 
@@ -75,11 +73,8 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          persist-credentials: true
 
-      - run: |
-          mkdir -p lib/lua/lib/Android
-          rm -f lib/lua/lib/Android/*.a
+      - run: mkdir -p lib/lua/lib/Android && rm -f lib/lua/lib/Android/*.a
 
       - uses: actions/download-artifact@v4
         with:
@@ -89,8 +84,7 @@ jobs:
       - uses: EndBug/add-and-commit@v9
         with:
           author_name: github-actions
-          author_email: github-actions@github.com
+          author_email: github-actions@github-actions.com
           message: "Update LuaJIT static libraries for Android"
-          add: "lib/lua/lib/Android/*.a"
-          pull: true
+          add: "lib/lua/lib/Android/*.a --force"
           push: true
