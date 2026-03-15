@@ -1,0 +1,72 @@
+name: Build LuaJIT Android
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        include:
+          - arch: arm64
+            cross: aarch64-linux-android-
+            target: aarch64-linux-android21
+            output: libluajit-64.a
+            extra: "-DLUAJIT_ENABLE_GC64"
+
+          - arch: armv7
+            cross: arm-linux-androideabi-
+            target: armv7a-linux-androideabi21
+            output: libluajit-v7.a
+            extra: ""
+
+          - arch: x86
+            cross: i686-linux-android-
+            target: i686-linux-android21
+            output: libluajit-x86.a
+            extra: ""
+
+          - arch: x86_64
+            cross: x86_64-linux-android-
+            target: x86_64-linux-android21
+            output: libluajit-x86_64.a
+            extra: ""
+
+    name: build (${{ matrix.arch }})
+
+    steps:
+    - name: Checkout LuaJIT
+      uses: actions/checkout@v4
+      with:
+        repository: LuaJIT/LuaJIT
+        path: luajit
+
+    - name: Install Android NDK
+      uses: nttld/setup-ndk@v1
+      with:
+        ndk-version: r27
+
+    - name: Prepare toolchain
+      run: |
+        echo "$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin" >> $GITHUB_PATH
+
+    - name: Build LuaJIT (${{ matrix.arch }})
+      run: |
+        cd luajit
+        make clean
+        make \
+          HOST_CC="gcc" \
+          CROSS=${{ matrix.cross }} \
+          TARGET_SYS=Linux \
+          TARGET_FLAGS="-fPIC" \
+          TARGET_CFLAGS="--target=${{ matrix.target }} ${{ matrix.extra }}"
+
+        cp src/libluajit.a ../${{ matrix.output }}
+
+    - name: Upload artifact (${{ matrix.arch }})
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ matrix.output }}
+        path: ${{ matrix.output }}
