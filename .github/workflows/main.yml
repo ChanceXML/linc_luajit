@@ -74,6 +74,7 @@ jobs:
           retention-days: 1
 
   commit:
+    name: Upload
     needs: build
     runs-on: ubuntu-latest
     steps:
