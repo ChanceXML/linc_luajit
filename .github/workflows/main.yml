@@ -1,10 +1,10 @@
-name: Build & Sync LuaJIT Android
+name: Build & Update LuaJIT Android
 
 on:
   workflow_dispatch:
     inputs:
       target_branch:
-        description: 'Branch to push updated LuaJIT libraries'
+        description: 'Branch to update with built libraries'
         required: true
         default: 'main'
 
@@ -56,13 +56,7 @@ jobs:
       - run: |
           cd luajit/src
           make clean
-          make \
-            HOST_CC="${{ matrix.hostcc }}" \
-            CC="${{ matrix.clang }}" \
-            TARGET_SYS=Linux \
-            TARGET_FLAGS="-fPIC" \
-            TARGET_STRIP="true" \
-            XCFLAGS="${{ matrix.extra }}"
+          make HOST_CC="${{ matrix.hostcc }}" CC="${{ matrix.clang }}" TARGET_SYS=Linux TARGET_FLAGS="-fPIC" TARGET_STRIP="true" XCFLAGS="${{ matrix.extra }}"
           mkdir -p ../../output
           cp libluajit.a ../../output/${{ matrix.output }}
 
@@ -72,14 +66,14 @@ jobs:
           path: output/${{ matrix.output }}
           retention-days: 1
 
-  commit:
+  update-branch:
     needs: build
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.inputs.target_branch }}
           fetch-depth: 0
+          ref: ${{ github.event.inputs.target_branch }}
 
       - run: |
           mkdir -p lib/lua/lib/Android
@@ -93,7 +87,6 @@ jobs:
       - run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          
-          git add lib/lua/lib/Android/*.a
-          git commit -m "Update LuaJIT static libraries for Android" || echo "No changes"
+          git add -f lib/lua/lib/Android/*.a
+          git commit -m "Update LuaJIT static libraries for Android" || echo "No changes to commit"
           git push origin ${{ github.event.inputs.target_branch }}
