@@ -11,12 +11,12 @@ jobs:
       matrix:
         include:
           - arch: arm64
-            target: aarch64-linux-android21
+            clang: aarch64-linux-android21-clang
             output: libluajit-64.a
             extra: "-DLUAJIT_ENABLE_GC64"
 
           - arch: armv7
-            target: armv7a-linux-androideabi21
+            clang: armv7a-linux-androideabi21-clang
             output: libluajit-v7.a
             extra: ""
 
@@ -24,37 +24,37 @@ jobs:
 
     steps:
 
-    - name: Checkout LuaJIT
-      uses: actions/checkout@v4
-      with:
-        repository: LuaJIT/LuaJIT
-        path: luajit
+      - name: Checkout LuaJIT
+        uses: actions/checkout@v4
+        with:
+          repository: LuaJIT/LuaJIT
+          path: luajit
 
-    - name: Install Android NDK r21
-      uses: nttld/setup-ndk@v1
-      with:
-        ndk-version: r21
+      - name: Install Android NDK r21
+        uses: nttld/setup-ndk@v1
+        with:
+          ndk-version: r21
 
-    - name: Add clang to PATH
-      run: |
-        echo "$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin" >> $GITHUB_PATH
+      - name: Add toolchain to PATH
+        run: |
+          echo "$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin" >> $GITHUB_PATH
 
-    - name: Build LuaJIT
-      run: |
-        cd luajit
-        make clean
+      - name: Build LuaJIT (${{ matrix.arch }})
+        run: |
+          cd luajit/src
+          make clean
 
-        make \
-          HOST_CC="gcc" \
-          CC="${{ matrix.target }}-clang" \
-          TARGET_SYS=Linux \
-          TARGET_FLAGS="-fPIC" \
-          XCFLAGS="${{ matrix.extra }}"
+          make \
+            HOST_CC="gcc" \
+            CC="${{ matrix.clang }}" \
+            TARGET_SYS=Linux \
+            TARGET_FLAGS="-fPIC" \
+            XCFLAGS="${{ matrix.extra }}"
 
-        cp src/libluajit.a ../${{ matrix.output }}
+          cp libluajit.a ../../${{ matrix.output }}
 
-    - name: Upload artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: ${{ matrix.output }}
-        path: ${{ matrix.output }}
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.output }}
+          path: ${{ matrix.output }}
