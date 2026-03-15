@@ -2,7 +2,6 @@ name: Build LuaJIT Android
 
 on:
   push:
-  workflow_dispatch:
 
 jobs:
   build:
@@ -13,33 +12,35 @@ jobs:
         include:
           - arch: arm64
             clang: aarch64-linux-android21-clang
-            output: libluajit-64.so
+            output: libluajit-arm64.a
             extra: "-DLUAJIT_ENABLE_GC64"
             hostcc: "gcc"
           - arch: armv7
             clang: armv7a-linux-androideabi21-clang
-            output: libluajit-v7.so
+            output: libluajit-armv7.a
             extra: ""
             hostcc: "gcc -m32"
           - arch: x86
             clang: i686-linux-android21-clang
-            output: libluajit-x86.so
+            output: libluajit-x86.a
             extra: ""
             hostcc: "gcc -m32"
           - arch: x86_64
             clang: x86_64-linux-android21-clang
-            output: libluajit-x86_64.so
+            output: libluajit-x86_64.a
             extra: "-DLUAJIT_ENABLE_GC64"
             hostcc: "gcc"
 
+    name: build (${{ matrix.arch }})
+
     steps:
-      - name: Checkout LuaJIT source
+      - name: Checkout LuaJIT
         uses: actions/checkout@v4
         with:
           repository: LuaJIT/LuaJIT
           path: luajit
 
-      - name: Install build dependencies
+      - name: Install dependencies
         run: |
           sudo apt update
           sudo apt install -y gcc-multilib g++-multilib make
@@ -49,38 +50,23 @@ jobs:
         with:
           ndk-version: r21
 
-      - name: Add NDK toolchain to PATH
-        run: |
-          echo "$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin" >> $GITHUB_PATH
+      - name: Add NDK to PATH
+        run: echo "$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin" >> $GITHUB_PATH
 
-      - name: Build LuaJIT (${{ matrix.arch }})
+      - name: Build LuaJIT
         run: |
           cd luajit/src
           make clean
+          make HOST_CC="${{ matrix.hostcc }}" CC="${{ matrix.clang }}" TARGET_SYS=Linux TARGET_FLAGS="-fPIC" XCFLAGS="${{ matrix.extra }}"
+          mkdir -p ../../lib/lua/lib/Android
+          cp libluajit.a ../../lib/lua/lib/Android/${{ matrix.output }}
 
-          make \
-            HOST_CC="${{ matrix.hostcc }}" \
-            CC="${{ matrix.clang }}" \
-            TARGET_SYS=Linux \
-            TARGET_FLAGS="-fPIC" \
-            TARGET_STRIP="true" \
-            XCFLAGS="${{ matrix.extra }}"
-
-          cp libluajit.a ../../${{ matrix.output }}
-
-      - name: Merge .so files into repo
-        run: |
-          mkdir -p lib/lua/lib/Android
-          shopt -s nullglob
-          cp -a luajit/*.so lib/lua/lib/Android/
-          shopt -u nullglob
-
-      - name: Commit & push .so files using Actions bot
+      - name: Push updated libraries
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add lib/lua/lib/Android/*.so
-          git commit -m "Update LuaJIT .so libraries [ci skip]" || echo "No changes to commit"
+          git add lib/lua/lib/Android/*.a
+          git commit -m "Update LuaJIT .a libraries [ci skip]" || echo "No changes"
           git push
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
