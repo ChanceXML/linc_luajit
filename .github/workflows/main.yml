@@ -55,7 +55,7 @@ jobs:
           repository: LuaJIT/LuaJIT
           path: luajit
 
-      - name: Build LuaJIT (${{ matrix.arch }})
+      - name: Build LuaJIT static library for ${{ matrix.arch }}
         run: |
           cd luajit/src
           make clean
@@ -64,13 +64,15 @@ jobs:
             CC="${{ matrix.clang }}" \
             TARGET_SYS=Linux \
             TARGET_FLAGS="-fPIC" \
-            XCFLAGS="${{ matrix.extra }}"
+            XCFLAGS="${{ matrix.extra }}" \
+            BUILDMODE=static
+          mkdir -p ../../lib/lua/lib/Android
           cp libluajit.a ../../lib/lua/lib/Android/${{ matrix.output }}
 
-      - name: Push built .a files
+      - name: Commit and push .a files
         uses: EndBug/add-and-commit@v9
         with:
           author_name: github-actions
           author_email: github-actions@github.com
-          message: "Add LuaJIT static library for ${{ matrix.arch }}"
+          message: "Add LuaJIT static library ${{ matrix.output }}"
           add: "lib/lua/lib/Android/${{ matrix.output }}"
