@@ -1,0 +1,78 @@
+name: GitHub Release Sync
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_page:
+        description: 'GitHub release page URL (e.g., https://github.com/HaxeFoundation/hxcpp/releases/tag/v4.3.127)'
+        required: true
+      skip_folders:
+        description: 'Number of top-level folders to skip inside the ZIP before merging'
+        required: true
+        default: '1'
+
+jobs:
+  sync-release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write  # only write access for repo contents
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download release ZIP
+        run: |
+          RELEASE_PAGE="${{ github.event.inputs.release_page }}"
+          SKIP=${{ github.event.inputs.skip_folders }}
+
+          # Extract repo and tag from URL
+          REPO=$(echo "$RELEASE_PAGE" | awk -F'github.com/' '{print $2}' | awk -F'/releases/tag/' '{print $1}')
+          TAG=$(echo "$RELEASE_PAGE" | awk -F'/releases/tag/' '{print $2}')
+
+          ZIP_URL="https://github.com/$REPO/archive/refs/tags/$TAG.zip"
+          ZIP_NAME="source.zip"
+
+          echo "Downloading source ZIP from $ZIP_URL ..."
+          curl -L -o "$ZIP_NAME" "$ZIP_URL"
+
+          if ! file "$ZIP_NAME" | grep -q 'Zip archive data'; then
+            echo "ERROR: Downloaded file is not a valid ZIP."
+            exit 1
+          fi
+
+      - name: Extract and merge
+        run: |
+          mkdir temp_extract
+          unzip source.zip -d temp_extract
+
+          FOLDER="temp_extract"
+          for i in $(seq 1 $SKIP); do
+            SUBS=$(find "$FOLDER" -mindepth 1 -maxdepth 1 -type d)
+            if [ $(echo "$SUBS" | wc -l) -eq 1 ]; then
+              FOLDER="$SUBS"
+            else
+              break
+            fi
+          done
+
+          # Merge everything except .github
+          shopt -s dotglob
+          for f in "$FOLDER"/*; do
+            if [[ "$(basename "$f")" != ".github" ]]; then
+              cp -a "$f" ./
+            fi
+          done
+          shopt -u dotglob
+
+          rm -rf temp_extract
+          rm source.zip
+
+      - name: Commit & push
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git add .
+          git reset .github  # make sure .github is never added
+          git commit -m "Merged release from ${{ github.event.inputs.release_page }}" || echo "No changes"
+          git push
