@@ -2,6 +2,8 @@ name: Build LuaJIT Android
 
 on:
   push:
+    branches:
+      - main
 
 jobs:
   build:
@@ -33,27 +35,22 @@ jobs:
     name: Build (${{ matrix.arch }})
 
     steps:
-      - name: Checkout LuaJIT
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
         with:
           repository: LuaJIT/LuaJIT
           path: luajit
 
-      - name: Install build dependencies
-        run: |
+      - run: |
           sudo apt update
           sudo apt install -y gcc-multilib g++-multilib make
 
-      - name: Install Android NDK r21
-        uses: nttld/setup-ndk@v1
+      - uses: nttld/setup-ndk@v1
         with:
           ndk-version: r21
 
-      - name: Add NDK toolchain to PATH
-        run: echo "$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin" >> $GITHUB_PATH
+      - run: echo "$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin" >> $GITHUB_PATH
 
-      - name: Build LuaJIT ${{ matrix.arch }}
-        run: |
+      - run: |
           cd luajit/src
           make clean
           make \
@@ -66,45 +63,33 @@ jobs:
           mkdir -p ../../output
           cp libluajit.a ../../output/${{ matrix.output }}
 
-      - name: Upload Library Artifact
-        uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v4
         with:
           name: luajit-${{ matrix.arch }}
           path: output/${{ matrix.output }}
           retention-days: 1
 
   commit:
-    name: Upload
     needs: build
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout Current Repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Prepare target directory
-        run: |
-          # Create the folder if it doesn't exist
+      - run: |
           mkdir -p lib/lua/lib/Android
-          # Remove old .a files to ensure a clean replacement
           rm -f lib/lua/lib/Android/*.a
 
-      - name: Download all built libraries
-        uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v4
         with:
           path: lib/lua/lib/Android
           merge-multiple: true
 
-      - name: Debug - Verify Files
-        run: ls -R lib/lua/lib/Android
-
-      - name: Commit built libraries
-        uses: EndBug/add-and-commit@v9
+      - uses: EndBug/add-and-commit@v9
         with:
           author_name: github-actions
           author_email: github-actions@github.com
           message: "Update LuaJIT static libraries for Android"
           add: "lib/lua/lib/Android/*.a --force"
-          branch: "main"
           push: true
