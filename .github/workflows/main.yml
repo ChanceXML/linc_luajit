@@ -2,7 +2,6 @@ name: Build LuaJIT Android
 
 on:
   push:
-  workflow_dispatch:
 
 jobs:
   build:
@@ -31,7 +30,7 @@ jobs:
             extra: "-DLUAJIT_ENABLE_GC64"
             hostcc: "gcc"
 
-    name: Build (${{ matrix.arch }})   # <-- This makes Actions show "Build (arm64)" etc
+    name: Build (${{ matrix.arch }})
 
     steps:
       - name: Checkout LuaJIT
@@ -53,11 +52,6 @@ jobs:
       - name: Add NDK toolchain to PATH
         run: echo "$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin" >> $GITHUB_PATH
 
-      - name: Prepare output folder
-        run: |
-          mkdir -p lib/lua/lib/Android
-          rm -f lib/lua/lib/Android/*
-
       - name: Build LuaJIT ${{ matrix.arch }}
         run: |
           cd luajit/src
@@ -69,14 +63,35 @@ jobs:
             TARGET_FLAGS="-fPIC" \
             TARGET_STRIP="true" \
             XCFLAGS="${{ matrix.extra }}"
-          cp libluajit.a ../../lib/lua/lib/Android/${{ matrix.output }}
+          mkdir -p ../../output
+          cp libluajit.a ../../output/${{ matrix.output }}
 
-      - name: Commit built library
+      - name: Upload Library Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: luajit-${{ matrix.arch }}
+          path: output/${{ matrix.output }}
+          retention-days: 1
+
+  commit:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Current Repository
+        uses: actions/checkout@v4
+
+      - name: Download all built libraries
+        uses: actions/download-artifact@v4
+        with:
+          path: lib/lua/lib/Android
+          merge-multiple: true
+
+      - name: Commit built libraries
         uses: EndBug/add-and-commit@v9
         with:
           author_name: github-actions
           author_email: github-actions@github.com
-          message: "Add LuaJIT static library ${{ matrix.output }}"
-          add: "lib/lua/lib/Android/${{ matrix.output }}"
+          message: "Add compiled LuaJIT static libraries for Android"
+          add: "lib/lua/lib/Android/*.a"
           new_branch: "lua-libs"
           push: true
