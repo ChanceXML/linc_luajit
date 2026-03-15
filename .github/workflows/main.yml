@@ -2,14 +2,11 @@ name: Build LuaJIT Android
 
 on:
   push:
-    branches:
-      - main
   workflow_dispatch:
 
 jobs:
   build:
     runs-on: ubuntu-latest
-
     strategy:
       matrix:
         include:
@@ -20,7 +17,7 @@ jobs:
             hostcc: "gcc"
           - arch: armv7
             clang: armv7a-linux-androideabi21-clang
-            output: libluajit-armv7.a
+            output: libluajit-v7.a
             extra: ""
             hostcc: "gcc -m32"
           - arch: x86
@@ -34,6 +31,8 @@ jobs:
             extra: "-DLUAJIT_ENABLE_GC64"
             hostcc: "gcc"
 
+    name: Build (${{ matrix.arch }})
+
     steps:
       - name: Checkout LuaJIT
         uses: actions/checkout@v4
@@ -41,7 +40,7 @@ jobs:
           repository: LuaJIT/LuaJIT
           path: luajit
 
-      - name: Install build dependencies
+      - name: Install dependencies
         run: |
           sudo apt update
           sudo apt install -y gcc-multilib g++-multilib make
@@ -52,9 +51,10 @@ jobs:
           ndk-version: r21
 
       - name: Add NDK toolchain to PATH
-        run: echo "$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin" >> $GITHUB_PATH
+        run: |
+          echo "$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin" >> $GITHUB_PATH
 
-      - name: Build LuaJIT (${{ matrix.arch }})
+      - name: Build LuaJIT static (${{ matrix.arch }})
         run: |
           cd luajit/src
           make clean
@@ -64,11 +64,12 @@ jobs:
             TARGET_SYS=Linux \
             TARGET_FLAGS="-fPIC" \
             XCFLAGS="${{ matrix.extra }}" \
-            TARGET_STRIP=""   # Skip stripping, important for .a
+            BUILDMODE=static \
+            TARGET_STRIP=""
           mkdir -p ../../lib/lua/lib/Android
           cp libluajit.a ../../lib/lua/lib/Android/${{ matrix.output }}
 
-      - name: Commit built libraries
+      - name: Commit and push LuaJIT .a
         uses: EndBug/add-and-commit@v9
         with:
           author_name: github-actions
@@ -76,4 +77,3 @@ jobs:
           message: "Add LuaJIT static library ${{ matrix.output }}"
           add: "lib/lua/lib/Android/${{ matrix.output }}"
           branch: main
-          push: true
