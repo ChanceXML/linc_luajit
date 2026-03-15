@@ -22,6 +22,18 @@ jobs:
             extra: ""
             hostcc: "gcc -m32"
 
+          - arch: x86
+            clang: i686-linux-android21-clang
+            output: libluajit-x86.a
+            extra: ""
+            hostcc: "gcc -m32"
+
+          - arch: x86_64
+            clang: x86_64-linux-android21-clang
+            output: libluajit-x86_64.a
+            extra: "-DLUAJIT_ENABLE_GC64"
+            hostcc: "gcc"
+
     name: build (${{ matrix.arch }})
 
     steps:
@@ -35,7 +47,7 @@ jobs:
       - name: Install build dependencies
         run: |
           sudo apt update
-          sudo apt install -y gcc-multilib g++-multilib
+          sudo apt install -y gcc-multilib g++-multilib make
 
       - name: Install Android NDK r21
         uses: nttld/setup-ndk@v1
