@@ -57,17 +57,16 @@ jobs:
 
       - name: Build LuaJIT static library for ${{ matrix.arch }}
         run: |
-          cd luajit/src
-          make clean
-          make \
-            HOST_CC="${{ matrix.hostcc }}" \
-            CC="${{ matrix.clang }}" \
-            TARGET_SYS=Linux \
-            TARGET_FLAGS="-fPIC" \
-            XCFLAGS="${{ matrix.extra }}" \
-            BUILDMODE=static
-          mkdir -p ../../lib/lua/lib/Android
-          cp libluajit.a ../../lib/lua/lib/Android/${{ matrix.output }}
+         cd luajit/src
+         make clean
+         make HOST_CC="${{ matrix.hostcc }}" \
+              CC="${{ matrix.clang }}" \
+              TARGET_SYS=Linux \
+              TARGET_FLAGS="-fPIC" \
+              XCFLAGS="${{ matrix.extra }}" \
+              BUILDMODE=static
+         mkdir -p ../../lib/lua/lib/Android
+         cp libluajit.a ../../lib/lua/lib/Android/${{ matrix.output }}
 
       - name: Commit and push .a files
         uses: EndBug/add-and-commit@v9
