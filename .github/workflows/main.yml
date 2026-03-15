@@ -82,8 +82,12 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Create target directory
-        run: mkdir -p lib/lua/lib/Android
+      - name: Prepare target directory
+        run: |
+          # Create the folder if it doesn't exist
+          mkdir -p lib/lua/lib/Android
+          # Remove old .a files to ensure a clean replacement
+          rm -f lib/lua/lib/Android/*.a
 
       - name: Download all built libraries
         uses: actions/download-artifact@v4
@@ -91,18 +95,15 @@ jobs:
           path: lib/lua/lib/Android
           merge-multiple: true
 
-      - name: Debug - List downloaded files
-        run: |
-          echo "Verifying file transfer to lib/lua/lib/Android:"
-          ls -R lib/lua/lib/Android
+      - name: Debug - Verify Files
+        run: ls -R lib/lua/lib/Android
 
       - name: Commit built libraries
         uses: EndBug/add-and-commit@v9
         with:
           author_name: github-actions
           author_email: github-actions@github.com
-          message: "Add compiled LuaJIT static libraries for Android"
+          message: "Update LuaJIT static libraries for Android"
           add: "lib/lua/lib/Android/*.a --force"
           new_branch: "lua-libs"
           push: true
-          
