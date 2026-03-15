@@ -542,10 +542,8 @@ class Lua_helper {
 	}
 
 	public static dynamic function trace(s:String, ?inf:haxe.PosInfos):Void {
-
-		trace(s);
-
-	}
+    haxe.Log.trace(s, inf);
+}
 
 	public static var callbacks:Map<String, Dynamic> = new Map();
 
@@ -590,7 +588,7 @@ class Lua_helper {
 				return 1;
 			}
 		}catch(e:Dynamic){
-			if(sendErrorsToLua) {LuaL.error(l, 'CALLBACK ERROR! ${if(e.message != null) e.message else e}');return 0;}
+			if(sendErrorsToLua) {LuaL.error(l, 'CALLBACK ERROR! ' + Std.string(e));return 0;}
 			trace(e);
 			throw(e);
 		}
@@ -611,7 +609,7 @@ typedef Lua_Debug = {
 	@:optional var nups:Int;                // (u) number of upvalues
 	@:optional var linedefined:Int;         // (S)
 	@:optional var lastlinedefined:Int;     // (S)
-	@:optional var short_src:Array<String>; // (S)
+	@:optional var short_src:String; // (S)
 
 	@:optional var i_ci:Int;       // private
 
