@@ -2,9 +2,6 @@ name: Build LuaJIT Android
 
 on:
   push:
-    branches:
-      - main
-  workflow_dispatch:
 
 jobs:
   build:
@@ -34,7 +31,7 @@ jobs:
             extra: "-DLUAJIT_ENABLE_GC64"
             hostcc: "gcc"
 
-    name: Build ( ${{ matrix.arch }} )
+    name: Build ${{ matrix.arch }}
 
     steps:
       - name: Checkout LuaJIT
@@ -43,7 +40,7 @@ jobs:
           repository: LuaJIT/LuaJIT
           path: luajit
 
-      - name: Install dependencies
+      - name: Install build dependencies
         run: |
           sudo apt update
           sudo apt install -y gcc-multilib g++-multilib make
@@ -56,7 +53,12 @@ jobs:
       - name: Add NDK toolchain to PATH
         run: echo "$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin" >> $GITHUB_PATH
 
-      - name: Build LuaJIT (${{ matrix.arch }})
+      - name: Prepare output folder
+        run: |
+          mkdir -p ${{ github.workspace }}/lib/lua/lib/Android
+          rm -f ${{ github.workspace }}/lib/lua/lib/Android/*
+
+      - name: Build LuaJIT ${{ matrix.arch }}
         run: |
           cd luajit/src
           make clean
@@ -67,8 +69,7 @@ jobs:
             TARGET_FLAGS="-fPIC" \
             TARGET_STRIP="true" \
             XCFLAGS="${{ matrix.extra }}"
-          mkdir -p ../../lib/lua/lib/Android
-          cp libluajit.a ../../lib/lua/lib/Android/${{ matrix.output }}
+          cp libluajit.a ${{ github.workspace }}/lib/lua/lib/Android/${{ matrix.output }}
 
       - name: Commit built library
         uses: EndBug/add-and-commit@v9
@@ -79,3 +80,4 @@ jobs:
           add: "lib/lua/lib/Android/${{ matrix.output }}"
           new_branch: "lua-libs"
           push: true
+        working-directory: ${{ github.workspace }}
