@@ -3,8 +3,8 @@ name: Build & Update LuaJIT Android
 on:
   workflow_dispatch:
     inputs:
-      target_branch:
-        description: 'Branch to push the updated libraries'
+      branch:
+        description: 'Branch to update with new LuaJIT .a files'
         required: true
         default: 'main'
 
@@ -35,7 +35,7 @@ jobs:
             extra: "-DLUAJIT_ENABLE_GC64"
             hostcc: "gcc"
 
-    name: Build ({{ matrix.arch }})
+    name: Build (${{ matrix.arch }})
 
     steps:
       - uses: actions/checkout@v4
@@ -50,10 +50,7 @@ jobs:
 
       - run: echo "$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin" >> $GITHUB_PATH
 
-      - name: Build LuaJIT
-        run: |
-          mkdir -p output
-          git clone https://github.com/LuaJIT/LuaJIT.git luajit
+      - run: |
           cd luajit/src
           make clean
           make \
@@ -63,40 +60,39 @@ jobs:
             TARGET_FLAGS="-fPIC" \
             TARGET_STRIP="true" \
             XCFLAGS="${{ matrix.extra }}"
+          mkdir -p ../../output
           cp libluajit.a ../../output/${{ matrix.output }}
 
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v4
         with:
-          name: Build (${{ matrix.arch }})
+          name: luajit-${{ matrix.arch }}
           path: output/${{ matrix.output }}
           retention-days: 1
 
-  update-branch:
+  commit:
     needs: build
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          ref: ${{ github.event.inputs.target_branch }}
+          ref: ${{ github.event.inputs.branch }}
 
-      - name: Delete old libraries
-        run: |
+      - run: |
           mkdir -p lib/lua/lib/Android
           rm -f lib/lua/lib/Android/*.a
 
-      - name: Download built artifacts
-        uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v4
         with:
           path: lib/lua/lib/Android
           merge-multiple: true
 
-      - name: Commit & push updates
-        run: |
+      - run: ls -lh lib/lua/lib/Android
+
+      - run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
 
           git add -f lib/lua/lib/Android/*.a
-          git commit -m "Update LuaJIT static libraries $(date +'%Y-%m-%d %H:%M:%S')" || echo "No changes"
-          git push origin ${{ github.event.inputs.target_branch }}
+          git commit -m "Update LuaJIT static libraries for Android" || echo "No changes to commit"
+          git push origin ${{ github.event.inputs.branch }}
