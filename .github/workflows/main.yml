@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+  workflow_dispatch:
 
 jobs:
   build:
@@ -32,15 +33,12 @@ jobs:
             extra: "-DLUAJIT_ENABLE_GC64"
             hostcc: "gcc"
 
-    name: Build (${{ matrix.arch }})
-
+    name: Build ( ${{ matrix.arch }} )
     steps:
       - uses: actions/checkout@v4
-        with:
-          repository: LuaJIT/LuaJIT
-          path: luajit
 
-      - run: |
+      - name: Install dependencies
+        run: |
           sudo apt update
           sudo apt install -y gcc-multilib g++-multilib make
 
@@ -50,7 +48,8 @@ jobs:
 
       - run: echo "$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin" >> $GITHUB_PATH
 
-      - run: |
+      - name: Build LuaJIT ${{ matrix.arch }}
+        run: |
           cd luajit/src
           make clean
           make \
@@ -76,6 +75,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          persist-credentials: true
 
       - run: |
           mkdir -p lib/lua/lib/Android
@@ -91,5 +91,6 @@ jobs:
           author_name: github-actions
           author_email: github-actions@github.com
           message: "Update LuaJIT static libraries for Android"
-          add: "lib/lua/lib/Android/*.a --force"
+          add: "lib/lua/lib/Android/*.a"
+          pull: true
           push: true
