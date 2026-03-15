@@ -1,8 +1,8 @@
 name: Build LuaJIT Android
 
 on:
-  workflow_dispatch:
   push:
+  workflow_dispatch:
 
 jobs:
   build:
@@ -68,11 +68,5 @@ jobs:
 
           cp libluajit.so ../../lib/lua/lib/Android/libluajit-${{ matrix.arch }}.so
 
-      - name: List built files
+      - name: List .so files
         run: ls -lh lib/lua/lib/Android/
-
-      - name: Upload artifact (optional)
-        uses: actions/upload-artifact@v4
-        with:
-          name: libluajit-${{ matrix.arch }}
-          path: lib/lua/lib/Android/libluajit-${{ matrix.arch }}.so
