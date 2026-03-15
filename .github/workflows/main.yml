@@ -80,23 +80,26 @@ jobs:
           fetch-depth: 0
           ref: ${{ github.event.inputs.target_branch }}
 
-      - name: Clean old libraries
+      - name: Clean
         run: |
           mkdir -p lib/lua/lib/Android
           rm -rf lib/lua/lib/Android/*
 
-      - name: Download new artifacts
+      - name: Download
         uses: actions/download-artifact@v4
         with:
           path: lib/lua/lib/Android
           merge-multiple: true
 
-      - name: Commit & Push
+      - name: Debug
+        run: ls -R lib/lua/lib/Android
+
+      - name: Push
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -A
+          git add -A lib/lua/lib/Android
           if [ -n "$(git status --porcelain)" ]; then
             git commit -m "Update LuaJIT static libraries for Android"
-            git push origin ${{ github.event.inputs.target_branch }}
+            git push origin HEAD:${{ github.event.inputs.target_branch }}
           fi
