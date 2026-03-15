@@ -2,6 +2,7 @@ name: Build LuaJIT Android
 
 on:
   push:
+  workflow_dispatch:
 
 jobs:
   build:
@@ -14,7 +15,7 @@ jobs:
             clang: aarch64-linux-android21-clang
             output: libluajit-arm64.a
             extra: "-DLUAJIT_ENABLE_GC64"
-            hostcc: "gcc"
+            hostcc: gcc
           - arch: armv7
             clang: armv7a-linux-androideabi21-clang
             output: libluajit-armv7.a
@@ -29,16 +30,11 @@ jobs:
             clang: x86_64-linux-android21-clang
             output: libluajit-x86_64.a
             extra: "-DLUAJIT_ENABLE_GC64"
-            hostcc: "gcc"
-
-    name: build (${{ matrix.arch }})
+            hostcc: gcc
 
     steps:
-      - name: Checkout LuaJIT
+      - name: Checkout repository
         uses: actions/checkout@v4
-        with:
-          repository: LuaJIT/LuaJIT
-          path: luajit
 
       - name: Install dependencies
         run: |
@@ -50,23 +46,31 @@ jobs:
         with:
           ndk-version: r21
 
-      - name: Add NDK to PATH
+      - name: Add NDK toolchain to PATH
         run: echo "$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin" >> $GITHUB_PATH
 
-      - name: Build LuaJIT
+      - name: Checkout LuaJIT
+        uses: actions/checkout@v4
+        with:
+          repository: LuaJIT/LuaJIT
+          path: luajit
+
+      - name: Build LuaJIT (${{ matrix.arch }})
         run: |
           cd luajit/src
           make clean
-          make HOST_CC="${{ matrix.hostcc }}" CC="${{ matrix.clang }}" TARGET_SYS=Linux TARGET_FLAGS="-fPIC" XCFLAGS="${{ matrix.extra }}"
-          mkdir -p ../../lib/lua/lib/Android
+          make \
+            HOST_CC="${{ matrix.hostcc }}" \
+            CC="${{ matrix.clang }}" \
+            TARGET_SYS=Linux \
+            TARGET_FLAGS="-fPIC" \
+            XCFLAGS="${{ matrix.extra }}"
           cp libluajit.a ../../lib/lua/lib/Android/${{ matrix.output }}
 
-      - name: Push updated libraries
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add lib/lua/lib/Android/*.a
-          git commit -m "Update LuaJIT .a libraries [ci skip]" || echo "No changes"
-          git push
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Push built .a files
+        uses: EndBug/add-and-commit@v9
+        with:
+          author_name: github-actions
+          author_email: github-actions@github.com
+          message: "Add LuaJIT static library for ${{ matrix.arch }}"
+          add: "lib/lua/lib/Android/${{ matrix.output }}"
