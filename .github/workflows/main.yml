@@ -105,5 +105,5 @@ jobs:
           author_email: github-actions@github.com
           message: "Update LuaJIT static libraries for Android"
           add: "lib/lua/lib/Android/*.a --force"
-          new_branch: "lua-libs"
+          branch: "main"
           push: true
