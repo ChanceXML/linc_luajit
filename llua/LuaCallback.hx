@@ -21,52 +21,51 @@ package llua;
   
   /** Runs this Lua function once, with the given arguments. */
   public function call(args:Array<Dynamic> = null) {
-  
-   Lua.rawgeti(l, Lua.LUA_REGISTRYINDEX, this.ref);
 
- if (Lua.isfunction(l, -1)) {
+    Lua.rawgeti(l, Lua.LUA_REGISTRYINDEX, this.ref);
 
-     if (args == null) args = [];
+    if (Lua.isfunction(l, -1) != 0) { // isfunction returns Int, check != 0
 
-     for (arg in args)
-         Convert.toLua(l, arg);
+        if (args == null) args = [];
 
-     var status:Int = Lua.pcall(l, args.length, 0, 0);
+        for (arg in args)
+            Convert.toLua(l, arg);
 
-     if (status != Lua.LUA_OK) {
+        var status:Int = Lua.pcall(l, args.length, 0, 0);
 
-         var err:String = null;
+        if (status != Lua.LUA_OK) {
 
-         // Safely read error message
-         if (!Lua.isnil(l, -1))
-             err = Lua.tostring(l, -1);
+            var err:String = null;
 
-         Lua.pop(l, 1);
+            // Safely read error message
+            if (Lua.isnil(l, -1) == 0) // check “not nil”
+                err = Lua.tostring(l, -1);
 
-         // Fallback messages if Lua didn't return text
-         if (err == null || err == "") {
-             switch(status) {
-                 case Lua.LUA_ERRRUN:
-                     err = "Runtime Error";
-                 case Lua.LUA_ERRMEM:
-                     err = "Memory Allocation Error";
-                 case Lua.LUA_ERRERR:
-                     err = "Critical Error";
-                 default:
-                     err = "Unknown Error";
-             }
-         }
+            Lua.pop(l, 1);
 
-         trace("Error on callback: " + err);
-     }
- }
- else {
-     // Remove non-function value from stack
-     Lua.pop(l, 1);
- }
-  
+            // Fallback messages if Lua didn't return text
+            if (err == null || err == "") {
+                switch(status) {
+                    case Lua.LUA_ERRRUN:
+                        err = "Runtime Error";
+                    case Lua.LUA_ERRMEM:
+                        err = "Memory Allocation Error";
+                    case Lua.LUA_ERRERR:
+                        err = "Critical Error";
+                    default:
+                        err = "Unknown Error";
+                }
+            }
+
+            trace("Error on callback: " + err);
+        }
+    }
+    else {
+        // Remove non-function value from stack
+        Lua.pop(l, 1);
+    }
+
   }
-  
   /**
   
   * Deallocates the pointer reserved for this callback.
