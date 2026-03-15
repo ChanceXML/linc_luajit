@@ -1,77 +1,58 @@
 package llua;
 
-/**
+class LuaCallback {
 
-* Wrapper object for a Lua function (anonymous or not) sent from a script
+    private var l:State;
+    public var ref(default, null):Int;
 
-* for use as callback.
-  */
-  class LuaCallback {
-  
-  /** The Lua environment the function is bound to **/
-  private var l:State;
-  
-  /** Pointer to Lua function reserved for temporary use */
-  public var ref(default, null):Int;
-  
-  public function new(lua:State, ref:Int) {
-  this.l = lua;
-  this.ref = ref;
-  }
-  
-  /** Runs this Lua function once, with the given arguments. */
-  public function call(args:Array<Dynamic> = null) {
+    public function new(lua:State, ref:Int) {
+        this.l = lua;
+        this.ref = ref;
+    }
 
-    Lua.rawgeti(l, Lua.LUA_REGISTRYINDEX, this.ref);
+    public function call(args:Array<Dynamic> = null) {
 
-    if (Lua.isfunction(l, -1) != 0) { // isfunction returns Int, check != 0
+        Lua.rawgeti(l, Lua.LUA_REGISTRYINDEX, this.ref);
 
-        if (args == null) args = [];
+        if (Lua.isfunction(l, -1) != 0) {
 
-        for (arg in args)
-            Convert.toLua(l, arg);
+            if (args == null) args = [];
 
-        var status:Int = Lua.pcall(l, args.length, 0, 0);
+            for (arg in args)
+                Convert.toLua(l, arg);
 
-        if (status != Lua.LUA_OK) {
+            var status:Int = Lua.pcall(l, args.length, 0, 0);
 
-            var err:String = null;
+            if (status != Lua.LUA_OK) {
 
-            // Safely read error message
-            if (Lua.isnil(l, -1) == 0) // check “not nil”
-                err = Lua.tostring(l, -1);
+                var err:String = null;
 
-            Lua.pop(l, 1);
+                if (Lua.isnil(l, -1) == 0)
+                    err = Lua.tostring(l, -1);
 
-            // Fallback messages if Lua didn't return text
-            if (err == null || err == "") {
-                switch(status) {
-                    case Lua.LUA_ERRRUN:
-                        err = "Runtime Error";
-                    case Lua.LUA_ERRMEM:
-                        err = "Memory Allocation Error";
-                    case Lua.LUA_ERRERR:
-                        err = "Critical Error";
-                    default:
-                        err = "Unknown Error";
+                Lua.pop(l, 1);
+
+                if (err == null || err == "") {
+                    switch(status) {
+                        case Lua.LUA_ERRRUN:
+                            err = "Runtime Error";
+                        case Lua.LUA_ERRMEM:
+                            err = "Memory Allocation Error";
+                        case Lua.LUA_ERRERR:
+                            err = "Critical Error";
+                        default:
+                            err = "Unknown Error";
+                    }
                 }
-            }
 
-            trace("Error on callback: " + err);
+                trace("Error on callback: " + err);
+            }
+        } else {
+            Lua.pop(l, 1);
         }
     }
-    else {
-        // Remove non-function value from stack
-        Lua.pop(l, 1);
-    }
 
-  }
-  /**
-  
-  * Deallocates the pointer reserved for this callback.
-  * Make sure to call this once you're done using the function.
-    */
     public function dispose() {
-    LuaL.unref(l, Lua.LUA_REGISTRYINDEX, ref);
+        LuaL.unref(l, Lua.LUA_REGISTRYINDEX, ref);
     }
-  }
+}
