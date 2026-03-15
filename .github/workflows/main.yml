@@ -34,7 +34,12 @@ jobs:
             extra: "-DLUAJIT_ENABLE_GC64"
             hostcc: "gcc"
 
+    name: Build ({{ matrix.arch }})
+
     steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
       - name: Checkout LuaJIT
         uses: actions/checkout@v4
         with:
@@ -52,8 +57,7 @@ jobs:
           ndk-version: r21
 
       - name: Add NDK toolchain to PATH
-        run: |
-          echo "$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin" >> $GITHUB_PATH
+        run: echo "$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin" >> $GITHUB_PATH
 
       - name: Build LuaJIT static (${{ matrix.arch }})
         run: |
@@ -75,6 +79,6 @@ jobs:
         with:
           author_name: github-actions
           author_email: github-actions@github.com
-          message: Add LuaJIT static library ${{ matrix.output }}
+          message: "Add LuaJIT static library ${{ matrix.output }}"
           add: "lib/lua/lib/Android/${{ matrix.output }}"
-          branch: main
+          push: true
