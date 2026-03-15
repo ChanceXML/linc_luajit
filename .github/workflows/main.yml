@@ -32,17 +32,17 @@ jobs:
           repository: LuaJIT/LuaJIT
           path: luajit
 
-      - name: Install dependencies
+      - name: Install build dependencies
         run: |
           sudo apt update
-          sudo apt install gcc-multilib g++-multilib -y
+          sudo apt install -y gcc-multilib g++-multilib
 
       - name: Install Android NDK r21
         uses: nttld/setup-ndk@v1
         with:
           ndk-version: r21
 
-      - name: Add NDK clang to PATH
+      - name: Add NDK toolchain to PATH
         run: |
           echo "$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin" >> $GITHUB_PATH
 
@@ -56,6 +56,7 @@ jobs:
             CC="${{ matrix.clang }}" \
             TARGET_SYS=Linux \
             TARGET_FLAGS="-fPIC" \
+            TARGET_STRIP="true" \
             XCFLAGS="${{ matrix.extra }}"
 
           cp libluajit.a ../../${{ matrix.output }}
