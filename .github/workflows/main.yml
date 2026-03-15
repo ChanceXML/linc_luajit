@@ -2,7 +2,6 @@ name: Build LuaJIT Android
 
 on:
   workflow_dispatch:
-  push:
 
 jobs:
   build:
@@ -13,32 +12,24 @@ jobs:
         include:
           - arch: arm64
             clang: aarch64-linux-android21-clang
-            output: libluajit-64.a
             extra: "-DLUAJIT_ENABLE_GC64"
             hostcc: "gcc"
-
           - arch: armv7
             clang: armv7a-linux-androideabi21-clang
-            output: libluajit-v7.a
             extra: ""
             hostcc: "gcc -m32"
-
           - arch: x86
             clang: i686-linux-android21-clang
-            output: libluajit-x86.a
             extra: ""
             hostcc: "gcc -m32"
-
           - arch: x86_64
             clang: x86_64-linux-android21-clang
-            output: libluajit-x86_64.a
             extra: "-DLUAJIT_ENABLE_GC64"
             hostcc: "gcc"
 
-    name: build (${{ matrix.arch }})
+    name: Build (${{ matrix.arch }})
 
     steps:
-
       - name: Checkout LuaJIT
         uses: actions/checkout@v4
         with:
@@ -48,7 +39,7 @@ jobs:
       - name: Install build dependencies
         run: |
           sudo apt update
-          sudo apt install -y gcc-multilib g++-multilib make unzip
+          sudo apt install -y gcc-multilib g++-multilib make
 
       - name: Install Android NDK r21
         uses: nttld/setup-ndk@v1
@@ -72,17 +63,15 @@ jobs:
             TARGET_STRIP="true" \
             XCFLAGS="${{ matrix.extra }}"
 
-          cp libluajit.a ../../${{ matrix.output }}
+          mkdir -p ../../lib/lua/lib/Android/
 
-      - name: Extract LuaJIT .zip files to lib/lua/lib/Android
-        run: |
-          mkdir -p lib/lua/lib/Android
-          for zip in ./path/to/zips/*.zip; do
-            unzip -o "$zip" -d lib/lua/lib/Android
-          done
+          cp libluajit.so ../../lib/lua/lib/Android/libluajit-${{ matrix.arch }}.so
 
-      - name: Upload artifact
+      - name: List built files
+        run: ls -lh lib/lua/lib/Android/
+
+      - name: Upload artifact (optional)
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ matrix.output }}
-          path: ${{ matrix.output }}
+          name: libluajit-${{ matrix.arch }}
+          path: lib/lua/lib/Android/libluajit-${{ matrix.arch }}.so
