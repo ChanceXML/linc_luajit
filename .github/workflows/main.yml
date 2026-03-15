@@ -73,12 +73,15 @@ jobs:
           path: output/${{ matrix.output }}
           retention-days: 1
 
-  commit:
+    commit:
     needs: build
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Current Repository
         uses: actions/checkout@v4
+
+      - name: Create target directory
+        run: mkdir -p lib/lua/lib/Android
 
       - name: Download all built libraries
         uses: actions/download-artifact@v4
@@ -86,12 +89,17 @@ jobs:
           path: lib/lua/lib/Android
           merge-multiple: true
 
+      - name: Debug - List downloaded files
+        run: |
+          echo "Checking directory structure..."
+          ls -R lib/lua/lib/Android
+
       - name: Commit built libraries
         uses: EndBug/add-and-commit@v9
         with:
           author_name: github-actions
           author_email: github-actions@github.com
           message: "Add compiled LuaJIT static libraries for Android"
-          add: "lib/lua/lib/Android/*.a"
+          add: "." 
           new_branch: "lua-libs"
           push: true
