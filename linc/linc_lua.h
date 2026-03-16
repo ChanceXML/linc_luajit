@@ -10,9 +10,8 @@
 
 namespace linc {
 
-    typedef ::cpp::Function < int(::cpp::Reference<lua_State>, ::String) > luaCallbackFN;
-    // typedef ::cpp::Function < int(::cpp::Pointer<lua_State>, ::String) > luaCallbackFN;
-    typedef ::cpp::Function < int(String) > HxTraceFN;
+    typedef ::cpp::Function<int(lua_State*, ::String)> luaCallbackFN;
+    typedef ::cpp::Function<int(String)> HxTraceFN;
 
     namespace lua {
 
@@ -29,7 +28,7 @@ namespace linc {
         extern void pushcclosure(lua_State* l, ::cpp::Function<int(lua_State*)> fn, int n);
         extern void pushcfunction(lua_State* l, ::cpp::Function<int(lua_State*)> fn);
 
-    } // lua
+    }
 
     namespace lual {
 
@@ -61,5 +60,4 @@ namespace linc {
 
     }
 
-
-} //linc
+}
