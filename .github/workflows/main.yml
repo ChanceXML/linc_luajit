@@ -49,8 +49,7 @@ jobs:
           ndk-version: r21
       - run: echo "$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin" >> $GITHUB_PATH
 
-      - name: Build LuaJIT
-        run: |
+      - run: |
           cd luajit/src
           make clean
           make HOST_CC="${{ matrix.hostcc }}" \
@@ -61,9 +60,6 @@ jobs:
                XCFLAGS="${{ matrix.extra }}"
           mkdir -p ../../output
           cp libluajit.a ../../output/${{ matrix.output }}
-
-      - name: Find Files
-        run: find . -name "*.a"
 
   commit:
     needs: build
@@ -76,24 +72,17 @@ jobs:
           fetch-depth: 0
           ref: ${{ github.event.inputs.target_branch }}
 
-      - name: Remove old .a files
-        run: |
+      - run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          rm -f lib/lua/lib/Android/*.a
+          mkdir -p lib/lua/lib/Android
+          # Copy all built .a files into source folder
+          for f in output/*.a; do
+            [ -f "$f" ] || continue
+            cp "$f" lib/lua/lib/Android/
+          done
 
-      - name: Copy new .a files
-        run: |
-          if compgen -G "output/*.a" > /dev/null; then
-              mkdir -p lib/lua/lib/Android
-              cp output/*.a lib/lua/lib/Android/
-          else
-              echo "No .a files found to copy"
-              exit 1
-          fi
-
-      - name: Commit and push
-        run: |
-          git add -f lib/lua/lib/Android/
+      - run: |
+          git add -f lib/lua/lib/Android/*.a
           git commit -m "Update LuaJIT Android binaries"
           git push origin ${{ github.event.inputs.target_branch }}
