@@ -92,7 +92,13 @@ jobs:
       - run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          ls -R lib/lua/lib/Android
-          git add -f lib/lua/lib/Android/
+          
+          git rm -r --cached lib/lua/lib/Android || true
+          
+          git add -f lib/lua/lib/Android/*.a
+          
+          git status
+          
           git commit --allow-empty -m "Update LuaJIT static libraries for Android"
           git push origin ${{ github.event.inputs.target_branch }}
+          
