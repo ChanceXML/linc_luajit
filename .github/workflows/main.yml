@@ -78,24 +78,28 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          ref: ${{ github.event.inputs.target_branch }}
 
-      - name: Clean
+      - name: Clean old libraries
         run: |
           mkdir -p lib/lua/lib/Android
-          rm -rf lib/lua/lib/Android/*
+          # Explicitly target and delete only the .a files
+          rm -f lib/lua/lib/Android/*.a
 
-      - name: Download
+      - name: Download new libraries
         uses: actions/download-artifact@v4
         with:
           path: lib/lua/lib/Android
           merge-multiple: true
 
-      - name: Push
+      - name: Commit and Push
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          
           git add -A lib/lua/lib/Android
-          if [ -n "$(git status --porcelain)" ]; then
-            git commit -m "Update LuaJIT static libraries for Android"
-            git push origin main
-          fi
+          
+          git commit --allow-empty -m "Update LuaJIT static libraries for Android"
+          
+          git push origin ${{ github.event.inputs.target_branch }}
+          
