@@ -5,13 +5,14 @@ import llua.Lua;
 import llua.LuaL;
 import llua.Macro.*;
 import haxe.DynamicAccess;
+import haxe.ds.ObjectMap;
 
 class Convert {
 
 public static var enableUnsupportedTraces = false;
 public static var allowFunctions = true;
-public static var functionReferences:Map<Dynamic,Array<Dynamic>> = new Map();
-
+public static var functionReferences:ObjectMap<Dynamic, Array<Dynamic>> = new ObjectMap();
+	
 @:keep inline public static function cleanFunctionRefs(){
 	functionReferences = new Map();
 }
