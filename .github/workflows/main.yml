@@ -10,6 +10,7 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+
     strategy:
       matrix:
         include:
@@ -48,11 +49,16 @@ jobs:
           path: luajit
           fetch-depth: 1
 
-      - run: sudo apt update && sudo apt install -y gcc-multilib g++-multilib make
+      - uses: actions/cache@v4
+        with:
+          path: ~/android-ndk
+          key: android-ndk-r21
 
       - uses: nttld/setup-ndk@v1
         with:
           ndk-version: r21
+
+      - run: sudo apt update && sudo apt install -y gcc-multilib g++-multilib make
 
       - run: echo "$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin" >> $GITHUB_PATH
 
@@ -97,11 +103,10 @@ jobs:
           git config user.email 41898282+github-actions[bot]@users.noreply.github.com
 
       - run: |
-          git rm -rf lib/lua/lib/Android/*/*.a || true
-          git commit -m "Remove old LuaJIT Android binaries" || echo "Nothing to delete"
-
-      - run: |
-          git add -f lib/lua/lib/Android/
-          git commit -m "Add LuaJIT Android binaries" || echo "No changes to commit"
-
-      - run: git push origin ${{ github.event.inputs.target_branch }}
+          git add -A lib/lua/lib/Android/
+          if git diff --cached --quiet; then
+            echo "No LuaJIT binary changes"
+          else
+            git commit -m "Update LuaJIT Android binaries"
+            git push origin ${{ github.event.inputs.target_branch }}
+          fi
