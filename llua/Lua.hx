@@ -235,6 +235,14 @@ extern class Lua {
 		_pushboolean(l, b == true ? 1 : 0);
 	}
 
+	@:noCompletion
+    @:native('lua_isnil')
+    static function _isnil(l:State, idx:Int):Int;
+
+    static inline function isnil(l:State, idx:Int):Bool {
+        return _isnil(l, idx) != 0;
+    }
+
 	// @:native('lua_pushlightuserdata')
 	// static function pushlightuserdata(l:State, p:Void) : Void;
 
