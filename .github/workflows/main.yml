@@ -61,28 +61,34 @@ jobs:
           mkdir -p ../../output
           cp libluajit.a ../../output/${{ matrix.output }}
 
+      - uses: actions/upload-artifact@v4
+        with:
+          name: luajit-${{ matrix.arch }}
+          path: output/${{ matrix.output }}
+          retention-days: 1
+
   commit:
     needs: build
     runs-on: ubuntu-latest
     permissions:
       contents: write
+
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
           ref: ${{ github.event.inputs.target_branch }}
 
+      - run: mkdir -p lib/lua/lib/Android
+
+      - uses: actions/download-artifact@v4
+        with:
+          path: lib/lua/lib/Android
+
       - run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          mkdir -p lib/lua/lib/Android
-          # Copy all built .a files into source folder
-          for f in output/*.a; do
-            [ -f "$f" ] || continue
-            cp "$f" lib/lua/lib/Android/
-          done
-
-      - run: |
+          ls -l lib/lua/lib/Android
           git add -f lib/lua/lib/Android/*.a
-          git commit -m "Update LuaJIT Android binaries"
+          git commit -m "Update LuaJIT Android binaries" || echo "No changes to commit"
           git push origin ${{ github.event.inputs.target_branch }}
