@@ -3,6 +3,7 @@ package llua;
 import llua.State;
 import llua.Convert;
 
+@:unreflective 
 class LuaCallback {
 
     private var l:State;
