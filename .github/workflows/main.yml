@@ -9,7 +9,7 @@ on:
         default: 'main'
 
 jobs:
-  build:
+  build-and-commit:
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -35,21 +35,25 @@ jobs:
             extra: "-DLUAJIT_ENABLE_GC64"
             hostcc: "gcc"
 
-    name: Build ( ${{ matrix.arch }} )
-
     steps:
       - uses: actions/checkout@v4
         with:
-          repository: LuaJIT/LuaJIT
-          path: luajit
+          fetch-depth: 0
+          ref: ${{ github.event.inputs.target_branch }}
 
-      - run: sudo apt update && sudo apt install -y gcc-multilib g++-multilib make
+      - name: Install build tools
+        run: |
+          sudo apt update
+          sudo apt install -y gcc-multilib g++-multilib make
+
       - uses: nttld/setup-ndk@v1
         with:
           ndk-version: r21
+
       - run: echo "$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin" >> $GITHUB_PATH
 
-      - run: |
+      - name: Build LuaJIT
+        run: |
           cd luajit/src
           make clean
           make HOST_CC="${{ matrix.hostcc }}" \
@@ -58,39 +62,17 @@ jobs:
                TARGET_FLAGS="-fPIC" \
                TARGET_STRIP="true" \
                XCFLAGS="${{ matrix.extra }}"
-          mkdir -p ../../output
-          cp libluajit.a ../../output/${{ matrix.output }}
+          mkdir -p ../../lib/lua/lib/Android
+          cp libluajit.a ../../lib/lua/lib/Android/${{ matrix.output }}
 
-      - uses: actions/upload-artifact@v4
-        with:
-          name: luajit-${{ matrix.arch }}
-          path: output/${{ matrix.output }}
-          retention-days: 1
-
-  commit:
-    needs: build
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-          ref: ${{ github.event.inputs.target_branch }}
-
-      - run: |
+      - name: Commit and push binaries
+        run: |
+          cd ../../
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git rm -rf lib/lua/lib/Android/*.a --ignore-unmatch
-          rm -rf lib/lua/lib/Android/*.a
-
-      - uses: actions/download-artifact@v4
-        with:
-          path: lib/lua/lib/Android
-          merge-multiple: true
-
-      - run: |
+          git rm -f lib/lua/lib/Android/*.a || true
+          git add -f lib/lua/lib/Android/*.a
           echo "Last build: $(date)" > lib/lua/lib/Android/build_info.txt
-          git add -f lib/lua/lib/Android/
+          git add lib/lua/lib/Android/build_info.txt
           git commit -m "Update LuaJIT Android binaries"
           git push origin ${{ github.event.inputs.target_branch }}
