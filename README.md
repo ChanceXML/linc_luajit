@@ -1,4 +1,4 @@
-# linc/LuaJIT (Android Compatible)
+# linc/LuaJIT (Android Modified)
 Haxe/hxcpp @:native bindings for [LuaJIT](http://luajit.org/).
 
 This is a [linc](http://snowkit.github.io/linc/) library.
@@ -6,10 +6,6 @@ This is a [linc](http://snowkit.github.io/linc/) library.
 ---
 
 This library works with the Haxe cpp target only.
-
----
-
-This Is Modified To Work For Android
 
 ---
 
