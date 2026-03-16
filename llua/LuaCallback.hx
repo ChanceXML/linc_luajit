@@ -39,7 +39,7 @@ class LuaCallback {
             var err:String = null;
 
             // Only read error if stack top is not nil
-            if (!Lua.isnil(l, -1)) err = Lua.tostring(l, -1);
+            if (!Lua.isNilBool(l, -1)) err = Lua.tostring(l, -1);
             Lua.pop(l, 1);
 
             // Fallback error messages
