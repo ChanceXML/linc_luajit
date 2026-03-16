@@ -75,6 +75,7 @@ jobs:
           path: lib/lua/lib/Android/
 
   commit:
+    name: Add Files
     needs: build
     runs-on: ubuntu-latest
     permissions:
