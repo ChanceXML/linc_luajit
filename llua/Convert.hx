@@ -3,6 +3,7 @@ package llua;
 import llua.State;
 import llua.Lua;
 import llua.LuaL;
+import llua.LuaException;
 import llua.Macro.*;
 import haxe.DynamicAccess;
 import haxe.ds.ObjectMap;
