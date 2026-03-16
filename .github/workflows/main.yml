@@ -44,11 +44,9 @@ jobs:
           path: luajit
 
       - run: sudo apt update && sudo apt install -y gcc-multilib g++-multilib make
-
       - uses: nttld/setup-ndk@v1
         with:
           ndk-version: r21
-
       - run: echo "$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin" >> $GITHUB_PATH
 
       - run: |
@@ -81,8 +79,10 @@ jobs:
           ref: ${{ github.event.inputs.target_branch }}
 
       - run: |
-          mkdir -p lib/lua/lib/Android
-          rm -f lib/lua/lib/Android/*.a
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm -rf lib/lua/lib/Android/*.a --ignore-unmatch
+          rm -rf lib/lua/lib/Android/*.a
 
       - uses: actions/download-artifact@v4
         with:
@@ -90,15 +90,7 @@ jobs:
           merge-multiple: true
 
       - run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          
-          git rm -r --cached lib/lua/lib/Android || true
-          
-          git add -f lib/lua/lib/Android/*.a
-          
-          git status
-          
-          git commit --allow-empty -m "Update LuaJIT static libraries for Android"
+          echo "Last build: $(date)" > lib/lua/lib/Android/build_info.txt
+          git add -f lib/lua/lib/Android/
+          git commit -m "Update LuaJIT Android binaries"
           git push origin ${{ github.event.inputs.target_branch }}
-          
