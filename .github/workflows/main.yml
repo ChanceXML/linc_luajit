@@ -9,7 +9,7 @@ on:
         default: 'main'
 
 jobs:
-  build_and_commit:
+  build:
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -34,29 +34,22 @@ jobs:
             output: libluajit-x86_64.a
             extra: "-DLUAJIT_ENABLE_GC64"
             hostcc: "gcc"
-    name: Build + Commit ( ${{ matrix.arch }} )
+
+    name: Build ( ${{ matrix.arch }} )
+
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 0
-          ref: ${{ github.event.inputs.target_branch }}
+          repository: LuaJIT/LuaJIT
+          path: luajit
 
-      - name: Install build tools
-        run: sudo apt update && sudo apt install -y gcc-multilib g++-multilib make
-
-      - name: Setup Android NDK
-        uses: nttld/setup-ndk@v1
+      - run: sudo apt update && sudo apt install -y gcc-multilib g++-multilib make
+      - uses: nttld/setup-ndk@v1
         with:
           ndk-version: r21
+      - run: echo "$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin" >> $GITHUB_PATH
 
-      - name: Add NDK to PATH
-        run: echo "$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin" >> $GITHUB_PATH
-
-      - name: Clone LuaJIT
-        run: git clone https://github.com/LuaJIT/LuaJIT.git luajit
-
-      - name: Build LuaJIT
-        run: |
+      - run: |
           cd luajit/src
           make clean
           make HOST_CC="${{ matrix.hostcc }}" \
@@ -65,17 +58,34 @@ jobs:
                TARGET_FLAGS="-fPIC" \
                TARGET_STRIP="true" \
                XCFLAGS="${{ matrix.extra }}"
-          mkdir -p ../../lib/lua/lib/Android
-          cp libluajit.a ../../lib/lua/lib/Android/${{ matrix.output }}
+          mkdir -p ../../output
+          cp libluajit.a ../../output/${{ matrix.output }}
 
-      - name: Configure Git
+  commit:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.inputs.target_branch }}
+
+      - name: Remove old LuaJIT .a files safely
         run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git rm -rf lib/lua/lib/Android/*.a --ignore-unmatch
-          git add -f lib/lua/lib/Android/*.a
+          git rm -f lib/lua/lib/Android/*.a || echo "No old files to remove"
+          rm -f lib/lua/lib/Android/*.a
+
+      - name: Copy new binaries into repo
+        run: |
+          mkdir -p lib/lua/lib/Android
+          cp output/*.a lib/lua/lib/Android/
 
       - name: Commit and push
         run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -f lib/lua/lib/Android/*.a
           git commit -m "Update LuaJIT Android binaries"
           git push origin ${{ github.event.inputs.target_branch }}
