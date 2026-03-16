@@ -35,12 +35,11 @@ jobs:
             extra: "-DLUAJIT_ENABLE_GC64"
             hostcc: "gcc"
 
-    name: Build ( ${{ matrix.arch }} )
+    name: Build (${{ matrix.arch }})
     steps:
       - uses: actions/checkout@v4
         with:
-          repository: LuaJIT/LuaJIT
-          path: luajit
+          fetch-depth: 0
 
       - run: sudo apt update && sudo apt install -y gcc-multilib g++-multilib make
       - uses: nttld/setup-ndk@v1
@@ -49,8 +48,7 @@ jobs:
       - run: echo "$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin" >> $GITHUB_PATH
 
       - run: |
-          ls -R luajit
-          cd luajit/src || cd luajit  # fallback if src/ doesn't exist
+          cd luajit/src || cd luajit
           make clean
           make HOST_CC="${{ matrix.hostcc }}" \
                CC="${{ matrix.clang }}" \
@@ -58,13 +56,17 @@ jobs:
                TARGET_FLAGS="-fPIC" \
                TARGET_STRIP="true" \
                XCFLAGS="${{ matrix.extra }}"
-          mkdir -p ../../output
-          if [ -f libluajit.a ]; then
-              cp libluajit.a ../../output/${{ matrix.output }}
-          else
-              echo "libluajit.a not found!"
+
+          mkdir -p ../../lib/lua/lib/Android
+
+          FILE=$(find . -maxdepth 1 -type f -name "libluajit*.a" | head -n 1)
+          if [ -z "$FILE" ]; then
+              echo "Error: LuaJIT static library not found!"
+              ls -l
               exit 1
           fi
+
+          cp "$FILE" ../../lib/lua/lib/Android/${{ matrix.output }}
 
   commit:
     needs: build
@@ -80,11 +82,10 @@ jobs:
       - run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          rm -f lib/lua/lib/Android/*.a
-          mkdir -p lib/lua/lib/Android
-          cp -f output/*.a lib/lua/lib/Android/
+          rm -f lib/lua/lib/Android/libluajit-*.a || true
+
+      - run: git add -f lib/lua/lib/Android/*.a
 
       - run: |
-          git add -f lib/lua/lib/Android/*.a
-          git commit -m "Update LuaJIT Android binaries"
+          git commit -m "Update LuaJIT Android binaries" || echo "No changes to commit"
           git push origin ${{ github.event.inputs.target_branch }}
