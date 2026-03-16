@@ -62,8 +62,11 @@ int getinfo(lua_State *L, const char *what, Dynamic ar){
     if (strchr(what, 'S')){
         if (dbg.source)
             ar->__FieldRef(HX_CSTRING("source")) = ::String(dbg.source);
-        if (dbg.short_src)
+        
+        // FIX 1: Check if the string is not empty instead of checking the array's memory address
+        if (dbg.short_src[0] != '\0')
             ar->__FieldRef(HX_CSTRING("short_src")) = ::String(dbg.short_src);
+        
         if (dbg.linedefined != 0)
             ar->__FieldRef(HX_CSTRING("linedefined")) = (int)dbg.linedefined;
         if (dbg.lastlinedefined != 0)
@@ -182,7 +185,8 @@ static int hx_trace(lua_State* L) {
         lua_pop(L, 1);
     }
 
-    if (print_fn)
+    // FIX 2: Explicitly check against nullptr to resolve the ambiguous conversion error
+    if (print_fn != nullptr)
         print_fn(::String(buffer.str().c_str()));
 
     return 0;
