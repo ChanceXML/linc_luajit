@@ -68,27 +68,33 @@ jobs:
           retention-days: 1
 
   commit:
-    needs: build
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
+  needs: build
+  runs-on: ubuntu-latest
+  permissions:
+    contents: write
+  steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+        ref: ${{ github.event.inputs.target_branch }}
 
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-          ref: ${{ github.event.inputs.target_branch }}
+    - run: |
+        git config user.name "github-actions[bot]"
+        git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
-      - run: mkdir -p lib/lua/lib/Android
+        rm -rf lib/lua/lib/Android/*
 
-      - uses: actions/download-artifact@v4
-        with:
-          path: lib/lua/lib/Android
+    - uses: actions/download-artifact@v4
+      with:
+        path: lib/lua/lib/Android
+        merge-multiple: true
 
-      - run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          ls -l lib/lua/lib/Android
-          git add -f lib/lua/lib/Android/*.a
-          git commit -m "Update LuaJIT Android binaries" || echo "No changes to commit"
+    - run: |
+        git add -f lib/lua/lib/Android
+
+        if ! git diff --cached --quiet; then
+          git commit -m "Update LuaJIT Android binaries"
           git push origin ${{ github.event.inputs.target_branch }}
+        else
+          echo "No changes to commit"
+        fi
