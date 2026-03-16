@@ -5,7 +5,7 @@ on:
     inputs:
       target_branch:
         required: true
-        default: 'main'
+        default: main
 
 jobs:
   build:
@@ -17,7 +17,7 @@ jobs:
             clang: aarch64-linux-android21-clang
             output: libluajit-64.a
             extra: "-DLUAJIT_ENABLE_GC64"
-            hostcc: "gcc"
+            hostcc: gcc
           - arch: armv7
             clang: armv7a-linux-androideabi21-clang
             output: libluajit-v7.a
@@ -32,7 +32,7 @@ jobs:
             clang: x86_64-linux-android21-clang
             output: libluajit-x86_64.a
             extra: "-DLUAJIT_ENABLE_GC64"
-            hostcc: "gcc"
+            hostcc: gcc
 
     name: Build ( ${{ matrix.arch }} )
 
@@ -56,8 +56,7 @@ jobs:
 
       - run: echo "$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin" >> $GITHUB_PATH
 
-      - name: Build LuaJIT
-        run: |
+      - run: |
           mkdir -p lib/lua/lib/Android/${{ matrix.arch }}
           cd luajit/src
           make clean
@@ -72,7 +71,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: luajit-${{ matrix.arch }}
-          path: lib/lua/lib/Android/
+          path: lib/lua/lib/Android/${{ matrix.arch }}/
 
   commit:
     name: Add Files
@@ -80,26 +79,29 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
           ref: ${{ github.event.inputs.target_branch }}
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/download-artifact@v4
         with:
-         name: luajit-${{ matrix.arch }}
-         path: lib/lua/lib/Android/${{ matrix.arch }}/
+          pattern: luajit-*
+          merge-multiple: true
+          path: lib/lua/lib/Android/
 
-      - name: Configure Git
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+      - run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
 
-      - name: Add built libraries
-        run: |
+      - run: |
+          git rm -rf lib/lua/lib/Android/*/*.a || true
+          git commit -m "Remove old LuaJIT Android binaries" || echo "Nothing to delete"
+
+      - run: |
           git add -f lib/lua/lib/Android/
-          git commit -m "Update LuaJIT Android binaries" || echo "No changes to commit"
+          git commit -m "Add LuaJIT Android binaries" || echo "No changes to commit"
 
-      - name: Push changes
-        run: git push origin ${{ github.event.inputs.target_branch }}
+      - run: git push origin ${{ github.event.inputs.target_branch }}
