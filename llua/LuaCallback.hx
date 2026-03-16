@@ -14,7 +14,7 @@ class LuaCallback {
 
         Lua.rawgeti(l, Lua.LUA_REGISTRYINDEX, this.ref);
 
-        if (Lua.isfunction(l, -1) != 0) {
+        if (Lua.isFunctionBool(l, -1)) {
 
             if (args == null) args = [];
 
@@ -27,7 +27,7 @@ class LuaCallback {
 
                 var err:String = null;
 
-                if (Lua.isnil(l, -1) == 0)
+                if (!Lua.isNilBool(l, -1))
                     err = Lua.tostring(l, -1);
 
                 Lua.pop(l, 1);
