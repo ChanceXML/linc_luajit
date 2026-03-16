@@ -1,49 +1,51 @@
 package llua;
 
 import llua.State;
-import llua.Lua;
-import haxe.Exception;
+import llua.Convert;
 
-class LuaException extends Exception {
+class LuaCallback {
 
-public var error_code:Int = 0;
+    private var l:State;
+    public var ref(default, null):Int;
 
-public function new(?message:String, ?previous:Exception, ?code:Int = 0, ?luaState:State) {
+    public function new(lua:State, ref:Int) {
+        this.l = lua;
+        this.ref = ref;
+    }
 
-	error_code = code;
+    public function call(args:Array<Dynamic> = null) {
 
-	if (message == null) {
+        Lua.rawgeti(l, Lua.LUA_REGISTRYINDEX, ref);
 
-		message = switch(code) {
+        if (!Lua.isfunction(l, -1)) {
+            Lua.pop(l, 1);
+            return;
+        }
 
-			case Lua.LUA_ERRRUN:
-				if(luaState == null) {
-					"Lua Runtime Error";
-				} else {
-					var err = Lua.tostring(luaState, -1);
-					err == null ? "Lua Runtime Error" : err;
-				}
+        if (args == null) args = [];
+        for (arg in args) Convert.toLua(l, arg);
 
-			case Lua.LUA_ERRMEM:
-				"Lua VM ran out of memory";
+        var status:Int = Lua.pcall(l, args.length, 0, 0);
 
-			case Lua.LUA_ERRERR:
-				"Lua Error while handling another error";
+        if (status != Lua.LUA_OK) {
+            var err:String = null;
+            if (!Lua.isNilBool(l, -1)) err = Lua.tostring(l, -1);
+            Lua.pop(l, 1);
 
-			default:
-				"Lua Error: " + code;
-		};
-	}
+            if (err == null || err == "") {
+                switch(status) {
+                    case Lua.LUA_ERRRUN: err = "Runtime Error";
+                    case Lua.LUA_ERRMEM: err = "Memory Allocation Error";
+                    case Lua.LUA_ERRERR: err = "Critical Error";
+                    default: err = "Unknown Error";
+                }
+            }
 
-	super(message, previous);
-}
+            trace("Error on callback: " + err);
+        }
+    }
 
-public static function ifErrorThrow(l:State, status:Int) {
-
-	if (status == Lua.LUA_OK)
-		return;
-
-	throw new LuaException(null, null, status, l);
-}
-
+    public function dispose() {
+        LuaL.unref(l, Lua.LUA_REGISTRYINDEX, ref);
+    }
 }
