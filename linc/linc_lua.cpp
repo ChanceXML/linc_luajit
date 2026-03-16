@@ -62,11 +62,10 @@ int getinfo(lua_State *L, const char *what, Dynamic ar){
     if (strchr(what, 'S')){
         if (dbg.source)
             ar->__FieldRef(HX_CSTRING("source")) = ::String(dbg.source);
-        
-        // Use the first char check to avoid the "address of array" warning
+
         if (dbg.short_src[0] != '\0')
             ar->__FieldRef(HX_CSTRING("short_src")) = ::String(dbg.short_src);
-        
+
         if (dbg.linedefined != 0)
             ar->__FieldRef(HX_CSTRING("linedefined")) = (int)dbg.linedefined;
         if (dbg.lastlinedefined != 0)
@@ -95,8 +94,7 @@ int getinfo(lua_State *L, const char *what, Dynamic ar){
     return ret;
 }
 
-} // lua
-
+}
 
 namespace lual {
 
@@ -141,8 +139,7 @@ void error(lua_State *L, const char* fmt) {
     return s ? ::String(s) : ::String("");
 }
 
-} // lual
-
+}
 
 namespace helpers {
 
@@ -168,6 +165,7 @@ static int hx_trace(lua_State* L) {
     std::stringstream buffer;
     int n = lua_gettop(L);
     lua_getglobal(L, "tostring");
+
     for (int i = 1; i <= n; ++i){
         lua_pushvalue(L, -1);
         lua_pushvalue(L, i);
@@ -206,18 +204,17 @@ void register_hxtrace_lib(lua_State* L){
     lua_pop(L, 1);
 }
 
-} // helpers
-
+}
 
 namespace callbacks {
 
-static ::cpp::Function<int(lua_State*, ::String)> event_fn;
+static ::cpp::Function<int(::cpp::Reference<lua_State>, ::String)> event_fn;
 
 static int luaCallback(lua_State *L){
-    return event_fn(L, ::String(lua_tostring(L, lua_upvalueindex(1))));
+    return event_fn(::cpp::Reference<lua_State>(L), ::String(lua_tostring(L, lua_upvalueindex(1))));
 }
 
-void set_callbacks_function(::cpp::Function<int(lua_State*, ::String)> fn){
+void set_callbacks_function(::cpp::Function<int(::cpp::Reference<lua_State>, ::String)> fn){
     event_fn = fn;
 }
 
@@ -232,6 +229,6 @@ void remove_callback_function(lua_State *L, const char *name){
     lua_setglobal(L, name);
 }
 
-} // callbacks
+}
 
-} // linc
+}
