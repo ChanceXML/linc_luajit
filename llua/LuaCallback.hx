@@ -23,7 +23,7 @@ class LuaCallback {
 
         Lua.rawgeti(l, Lua.LUA_REGISTRYINDEX, ref);
 
-        if (!Lua.isfunction(l, -1)) {
+        if ((Lua.isfunction(l, -1) : Bool) == false) {
             Lua.pop(l, 1);
             return;
         }
@@ -36,7 +36,7 @@ class LuaCallback {
         if (status != Lua.LUA_OK) {
             var err:String = "";
 
-            if (!Lua.isnil(l, -1)) {
+            if ((Lua.isnil(l, -1) : Bool) == false) {
                 err = Lua.tostring(l, -1);
             }
             
