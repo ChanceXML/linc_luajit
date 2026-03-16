@@ -41,16 +41,26 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          ref: ${{ github.event.inputs.target_branch }}
+
+      - uses: actions/checkout@v4
+        with:
+          repository: LuaJIT/LuaJIT
+          path: luajit
+          fetch-depth: 1
 
       - run: sudo apt update && sudo apt install -y gcc-multilib g++-multilib make
+
       - uses: nttld/setup-ndk@v1
         with:
           ndk-version: r21
+
       - run: echo "$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin" >> $GITHUB_PATH
 
-      - run: |
+      - name: Build LuaJIT
+        run: |
           mkdir -p output
-          cd luajit/src || cd luajit
+          cd luajit/src
           make clean
           make HOST_CC="${{ matrix.hostcc }}" \
                CC="${{ matrix.clang }}" \
@@ -60,7 +70,8 @@ jobs:
                XCFLAGS="${{ matrix.extra }}"
           cp libluajit.a ../../output/${{ matrix.output }}
 
-      - run: |
+      - name: Copy to repo
+        run: |
           mkdir -p lib/lua/lib/Android/${{ matrix.arch }}
           cp output/${{ matrix.output }} lib/lua/lib/Android/${{ matrix.arch }}/
 
@@ -75,22 +86,15 @@ jobs:
           fetch-depth: 0
           ref: ${{ github.event.inputs.target_branch }}
 
-      - run: |
+      - name: Configure Git
+        run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          # Clean old .a files
-          rm -rf lib/lua/lib/Android/*
 
-      - uses: actions/download-artifact@v4
-        with:
-          path: lib/lua/lib/Android
-          merge-multiple: true
+      - name: Add built libraries
+        run: |
+          git add -f lib/lua/lib/Android/
+          git commit -m "Update LuaJIT Android binaries" || echo "No changes to commit"
 
-      - run: |
-          git add -f lib/lua/lib/Android
-          if ! git diff --cached --quiet; then
-            git commit -m "Update LuaJIT Android binaries"
-            git push origin ${{ github.event.inputs.target_branch }}
-          else
-            echo "No changes to commit"
-          fi
+      - name: Push changes
+        run: git push origin ${{ github.event.inputs.target_branch }}
