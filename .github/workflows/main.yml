@@ -49,23 +49,46 @@ jobs:
           ndk-version: r21
       - run: echo "$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin" >> $GITHUB_PATH
 
-      - run: |
-          cd luajit/src
+      - name: Debug LuaJIT source
+        run: ls -R luajit
+
+      - name: Build LuaJIT
+        run: |
+          # Determine correct src directory
+          if [ -d luajit/src ]; then
+            cd luajit/src
+          else
+            cd luajit
+          fi
+
           make clean
           make HOST_CC="${{ matrix.hostcc }}" \
                CC="${{ matrix.clang }}" \
                TARGET_SYS=Linux \
                TARGET_FLAGS="-fPIC" \
                TARGET_STRIP="true" \
-               XCFLAGS="${{ matrix.extra }}"
+               XCFLAGS="${{ matrix.extra }}" || { echo "Build failed"; exit 1; }
+
+          # Ensure output directory exists
           mkdir -p ../../output
-          cp libluajit.a ../../output/${{ matrix.output }}
+
+          # Copy static library
+          if [ -f libluajit.a ]; then
+            cp libluajit.a ../../output/${{ matrix.output }}
+          else
+            echo "libluajit.a not found, build probably failed"
+            exit 1
+          fi
+
+      - name: Find Files
+        run: find . -name "*.a"
 
   commit:
     needs: build
     runs-on: ubuntu-latest
     permissions:
       contents: write
+
     steps:
       - uses: actions/checkout@v4
         with:
@@ -76,8 +99,17 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           mkdir -p lib/lua/lib/Android
-          rm -f lib/lua/lib/Android/libluajit-*.a
-          cp output/*.a lib/lua/lib/Android/
+
+      - name: Copy built libraries
+        run: |
+          if compgen -G "output/*.a" > /dev/null; then
+            cp output/*.a lib/lua/lib/Android/
+          else
+            echo "No .a files found to copy"
+            exit 1
+          fi
+
+      - run: |
           git add -f lib/lua/lib/Android/*.a
-          git commit -m "Update LuaJIT Android binaries"
+          git commit -m "Update LuaJIT Android binaries" || echo "No changes to commit"
           git push origin ${{ github.event.inputs.target_branch }}
