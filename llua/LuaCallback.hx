@@ -10,7 +10,8 @@ class LuaCallback {
     public var ref(default, null):Int;
 
     public function new(lua:Dynamic, ref:Int) {
-        this.l = cast(lua, State);
+        var state:State = lua;
+        this.l = state;
         this.ref = ref;
     }
 
