@@ -36,7 +36,6 @@ jobs:
             hostcc: "gcc"
 
     name: Build ( ${{ matrix.arch }} )
-
     steps:
       - uses: actions/checkout@v4
         with:
@@ -50,7 +49,8 @@ jobs:
       - run: echo "$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin" >> $GITHUB_PATH
 
       - run: |
-          cd luajit/src
+          ls -R luajit
+          cd luajit/src || cd luajit  # fallback if src/ doesn't exist
           make clean
           make HOST_CC="${{ matrix.hostcc }}" \
                CC="${{ matrix.clang }}" \
@@ -59,7 +59,12 @@ jobs:
                TARGET_STRIP="true" \
                XCFLAGS="${{ matrix.extra }}"
           mkdir -p ../../output
-          cp libluajit.a ../../output/${{ matrix.output }}
+          if [ -f libluajit.a ]; then
+              cp libluajit.a ../../output/${{ matrix.output }}
+          else
+              echo "libluajit.a not found!"
+              exit 1
+          fi
 
   commit:
     needs: build
@@ -72,20 +77,14 @@ jobs:
           fetch-depth: 0
           ref: ${{ github.event.inputs.target_branch }}
 
-      - name: Remove old LuaJIT .a files safely
-        run: |
-          git rm -f lib/lua/lib/Android/*.a || echo "No old files to remove"
-          rm -f lib/lua/lib/Android/*.a
-
-      - name: Copy new binaries into repo
-        run: |
-          mkdir -p lib/lua/lib/Android
-          cp output/*.a lib/lua/lib/Android/
-
-      - name: Commit and push
-        run: |
+      - run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          rm -f lib/lua/lib/Android/*.a
+          mkdir -p lib/lua/lib/Android
+          cp -f output/*.a lib/lua/lib/Android/
+
+      - run: |
           git add -f lib/lua/lib/Android/*.a
           git commit -m "Update LuaJIT Android binaries"
           git push origin ${{ github.event.inputs.target_branch }}
