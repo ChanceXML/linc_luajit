@@ -4,7 +4,6 @@ on:
   workflow_dispatch:
     inputs:
       target_branch:
-        description: 'Branch to push updated libraries'
         required: true
         default: 'main'
 
@@ -59,7 +58,7 @@ jobs:
 
       - name: Build LuaJIT
         run: |
-          mkdir -p output
+          mkdir -p lib/lua/lib/Android/${{ matrix.arch }}
           cd luajit/src
           make clean
           make HOST_CC="${{ matrix.hostcc }}" \
@@ -68,12 +67,12 @@ jobs:
                TARGET_FLAGS="-fPIC" \
                TARGET_STRIP="true" \
                XCFLAGS="${{ matrix.extra }}"
-          cp libluajit.a ../../output/${{ matrix.output }}
+          cp -f libluajit.a ../../lib/lua/lib/Android/${{ matrix.arch }}/${{ matrix.output }}
 
-      - name: Copy to repo
-        run: |
-          mkdir -p lib/lua/lib/Android/${{ matrix.arch }}
-          cp output/${{ matrix.output }} lib/lua/lib/Android/${{ matrix.arch }}/
+      - uses: actions/upload-artifact@v4
+        with:
+          name: luajit-${{ matrix.arch }}
+          path: lib/lua/lib/Android/
 
   commit:
     needs: build
@@ -85,6 +84,12 @@ jobs:
         with:
           fetch-depth: 0
           ref: ${{ github.event.inputs.target_branch }}
+
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: luajit-*
+          merge-multiple: true
+          path: lib/lua/lib/Android/
 
       - name: Configure Git
         run: |
