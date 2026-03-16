@@ -12,8 +12,8 @@ class LuaCallback {
     private var l:State;
     public var ref(default, null):Int;
 
-    private function new(lua:State, ref:Int) {
-        this.l = lua;
+    private function new(lua:Dynamic, ref:Int) {
+        this.l = cast lua;
         this.ref = ref;
     }
 
@@ -42,7 +42,7 @@ class LuaCallback {
             if (Lua.isnil(l, -1) == 0) {
                 err = Lua.tostring(l, -1);
             }
-            
+
             Lua.pop(l, 1);
 
             if (err == "") {
