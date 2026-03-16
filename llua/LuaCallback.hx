@@ -6,13 +6,14 @@ import llua.Lua;
 import llua.LuaL;
 
 @:keep
-@:unreflective 
+@:unreflective
+@:cpp.NativeGen
 class LuaCallback {
 
     private var l:State;
     public var ref(default, null):Int;
 
-    @:native("new llua::LuaCallback_obj")
+    @:void
     public function new(lua:State, ref:Int) {
         this.l = lua;
         this.ref = ref;
