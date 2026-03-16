@@ -39,6 +39,9 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          repository: LuaJIT/LuaJIT
+          path: luajit
 
       - run: sudo apt update && sudo apt install -y gcc-multilib g++-multilib make
       - uses: nttld/setup-ndk@v1
@@ -56,19 +59,11 @@ jobs:
                TARGET_FLAGS="-fPIC" \
                TARGET_STRIP="true" \
                XCFLAGS="${{ matrix.extra }}"
+          mkdir -p ../../output
+          cp libluajit.a ../../output/${{ matrix.output }}
 
       - name: Find Files
         run: find . -name "*.a"
-
-      - name: Copy built library
-        run: |
-          mkdir -p lib/lua/lib/Android
-          if [ -f luajit/src/libluajit.a ]; then
-            cp luajit/src/libluajit.a lib/lua/lib/Android/${{ matrix.output }}
-          else
-            echo "No .a files found to copy"
-            exit 1
-          fi
 
   commit:
     needs: build
@@ -81,15 +76,24 @@ jobs:
           fetch-depth: 0
           ref: ${{ github.event.inputs.target_branch }}
 
-      - run: |
+      - name: Remove old .a files
+        run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git rm -rf lib/lua/lib/Android/*.a --ignore-unmatch
-          rm -rf lib/lua/lib/Android/*.a
+          rm -f lib/lua/lib/Android/*.a
 
-      - name: Add new libraries
+      - name: Copy new .a files
         run: |
-          cp lib/lua/lib/Android/*.a lib/lua/lib/Android/
+          if compgen -G "output/*.a" > /dev/null; then
+              mkdir -p lib/lua/lib/Android
+              cp output/*.a lib/lua/lib/Android/
+          else
+              echo "No .a files found to copy"
+              exit 1
+          fi
+
+      - name: Commit and push
+        run: |
           git add -f lib/lua/lib/Android/
           git commit -m "Update LuaJIT Android binaries"
           git push origin ${{ github.event.inputs.target_branch }}
