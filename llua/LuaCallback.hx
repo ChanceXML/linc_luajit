@@ -23,7 +23,7 @@ class LuaCallback {
 
         Lua.rawgeti(l, Lua.LUA_REGISTRYINDEX, ref);
 
-        if (Lua.isfunction(l, -1) == 0) {
+        if (!Lua.isfunction(l, -1)) {
             Lua.pop(l, 1);
             return;
         }
