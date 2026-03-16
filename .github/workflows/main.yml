@@ -35,11 +35,13 @@ jobs:
             extra: "-DLUAJIT_ENABLE_GC64"
             hostcc: "gcc"
 
-    name: Build (${{ matrix.arch }})
+    name: Build ( ${{ matrix.arch }} )
+
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 0
+          repository: LuaJIT/LuaJIT
+          path: luajit
 
       - run: sudo apt update && sudo apt install -y gcc-multilib g++-multilib make
       - uses: nttld/setup-ndk@v1
@@ -48,7 +50,7 @@ jobs:
       - run: echo "$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin" >> $GITHUB_PATH
 
       - run: |
-          cd luajit/src || cd luajit
+          cd luajit/src
           make clean
           make HOST_CC="${{ matrix.hostcc }}" \
                CC="${{ matrix.clang }}" \
@@ -56,17 +58,8 @@ jobs:
                TARGET_FLAGS="-fPIC" \
                TARGET_STRIP="true" \
                XCFLAGS="${{ matrix.extra }}"
-
-          mkdir -p ../../lib/lua/lib/Android
-
-          FILE=$(find . -maxdepth 1 -type f -name "libluajit*.a" | head -n 1)
-          if [ -z "$FILE" ]; then
-              echo "Error: LuaJIT static library not found!"
-              ls -l
-              exit 1
-          fi
-
-          cp "$FILE" ../../lib/lua/lib/Android/${{ matrix.output }}
+          mkdir -p ../../output
+          cp libluajit.a ../../output/${{ matrix.output }}
 
   commit:
     needs: build
@@ -82,10 +75,9 @@ jobs:
       - run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          rm -f lib/lua/lib/Android/libluajit-*.a || true
-
-      - run: git add -f lib/lua/lib/Android/*.a
-
-      - run: |
-          git commit -m "Update LuaJIT Android binaries" || echo "No changes to commit"
+          mkdir -p lib/lua/lib/Android
+          rm -f lib/lua/lib/Android/libluajit-*.a
+          cp output/*.a lib/lua/lib/Android/
+          git add -f lib/lua/lib/Android/*.a
+          git commit -m "Update LuaJIT Android binaries"
           git push origin ${{ github.event.inputs.target_branch }}
