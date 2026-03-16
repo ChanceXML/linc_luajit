@@ -190,7 +190,7 @@ static int hx_trace(lua_State* L){
         lua_pop(L,1);
     }
 
-    if (print_fn)
+    if (print_fn != null())
         print_fn(::String(buffer.str().c_str()));
 
     return 0;
