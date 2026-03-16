@@ -7,16 +7,18 @@ import llua.LuaL;
 
 @:keep
 @:unreflective
-@:cpp.NativeGen
 class LuaCallback {
 
     private var l:State;
     public var ref(default, null):Int;
 
-    @:void
-    public function new(lua:State, ref:Int) {
+    private function new(lua:State, ref:Int) {
         this.l = lua;
         this.ref = ref;
+    }
+
+    public static function create(lua:State, ref:Int):LuaCallback {
+        return new LuaCallback(lua, ref);
     }
 
     public function call(args:Array<Dynamic> = null) {
