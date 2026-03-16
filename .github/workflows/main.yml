@@ -80,26 +80,18 @@ jobs:
           fetch-depth: 0
           ref: ${{ github.event.inputs.target_branch }}
 
-      - name: Clean old libraries
-        run: |
+      - run: |
           mkdir -p lib/lua/lib/Android
-          # Explicitly target and delete only the .a files
           rm -f lib/lua/lib/Android/*.a
 
-      - name: Download new libraries
-        uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v4
         with:
           path: lib/lua/lib/Android
           merge-multiple: true
 
-      - name: Commit and Push
-        run: |
+      - run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          
-          git add -A lib/lua/lib/Android
-          
+          git add -f lib/lua/lib/Android/*.a
           git commit --allow-empty -m "Update LuaJIT static libraries for Android"
-          
           git push origin ${{ github.event.inputs.target_branch }}
-          
