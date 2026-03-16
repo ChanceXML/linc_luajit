@@ -39,9 +39,6 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
-        with:
-          repository: LuaJIT/LuaJIT
-          path: luajit
 
       - run: sudo apt update && sudo apt install -y gcc-multilib g++-multilib make
       - uses: nttld/setup-ndk@v1
@@ -49,46 +46,35 @@ jobs:
           ndk-version: r21
       - run: echo "$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin" >> $GITHUB_PATH
 
-      - name: Debug LuaJIT source
-        run: ls -R luajit
-
       - name: Build LuaJIT
         run: |
-          # Determine correct src directory
-          if [ -d luajit/src ]; then
-            cd luajit/src
-          else
-            cd luajit
-          fi
-
+          cd luajit/src
           make clean
           make HOST_CC="${{ matrix.hostcc }}" \
                CC="${{ matrix.clang }}" \
                TARGET_SYS=Linux \
                TARGET_FLAGS="-fPIC" \
                TARGET_STRIP="true" \
-               XCFLAGS="${{ matrix.extra }}" || { echo "Build failed"; exit 1; }
-
-          # Ensure output directory exists
-          mkdir -p ../../output
-
-          # Copy static library
-          if [ -f libluajit.a ]; then
-            cp libluajit.a ../../output/${{ matrix.output }}
-          else
-            echo "libluajit.a not found, build probably failed"
-            exit 1
-          fi
+               XCFLAGS="${{ matrix.extra }}"
 
       - name: Find Files
         run: find . -name "*.a"
+
+      - name: Copy built library
+        run: |
+          mkdir -p lib/lua/lib/Android
+          if [ -f luajit/src/libluajit.a ]; then
+            cp luajit/src/libluajit.a lib/lua/lib/Android/${{ matrix.output }}
+          else
+            echo "No .a files found to copy"
+            exit 1
+          fi
 
   commit:
     needs: build
     runs-on: ubuntu-latest
     permissions:
       contents: write
-
     steps:
       - uses: actions/checkout@v4
         with:
@@ -98,18 +84,12 @@ jobs:
       - run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          mkdir -p lib/lua/lib/Android
+          git rm -rf lib/lua/lib/Android/*.a --ignore-unmatch
+          rm -rf lib/lua/lib/Android/*.a
 
-      - name: Copy built libraries
+      - name: Add new libraries
         run: |
-          if compgen -G "output/*.a" > /dev/null; then
-            cp output/*.a lib/lua/lib/Android/
-          else
-            echo "No .a files found to copy"
-            exit 1
-          fi
-
-      - run: |
-          git add -f lib/lua/lib/Android/*.a
-          git commit -m "Update LuaJIT Android binaries" || echo "No changes to commit"
+          cp lib/lua/lib/Android/*.a lib/lua/lib/Android/
+          git add -f lib/lua/lib/Android/
+          git commit -m "Update LuaJIT Android binaries"
           git push origin ${{ github.event.inputs.target_branch }}
