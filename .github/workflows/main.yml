@@ -35,6 +35,8 @@ jobs:
             extra: "-DLUAJIT_ENABLE_GC64"
             hostcc: "gcc"
 
+    name: Build ( ${{ matrix.arch }} )
+
     steps:
       - uses: actions/checkout@v4
         with:
