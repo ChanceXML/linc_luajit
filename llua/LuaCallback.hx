@@ -10,8 +10,7 @@ class LuaCallback {
     public var ref(default, null):Int;
 
     public function new(lua:Dynamic, ref:Int) {
-        var state:State = lua;
-        this.l = state;
+        this.l = untyped __cpp__("({0})", lua);
         this.ref = ref;
     }
 
