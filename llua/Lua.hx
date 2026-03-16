@@ -239,7 +239,7 @@ extern class Lua {
     @:native('lua_isnil')
     static function _isnil(l:State, idx:Int):Int;
 
-    static inline function isnil(l:State, idx:Int):Bool {
+    static inline function isNilBool(l:State, idx:Int):Bool {
         return _isnil(l, idx) != 0;
     }
 
