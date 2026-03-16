@@ -5,18 +5,15 @@ import llua.Convert;
 
 class LuaCallback {
 
-    /** The Lua environment the function is bound to **/
     private var l:State;
 
-    /** Pointer to Lua function reserved for temporary use */
     public var ref(default, null):Int;
 
     public function new(lua:Dynamic, ref:Int) {
-        this.l = cast lua;
+        this.l = cast(lua, State);
         this.ref = ref;
     }
 
-    /** Runs this Lua function once, with the given arguments. */
     public function call(args:Array<Dynamic> = null) {
 
         Lua.rawgeti(l, Lua.LUA_REGISTRYINDEX, ref);
@@ -50,7 +47,6 @@ class LuaCallback {
         }
     }
 
-    /** Deallocates the pointer reserved for this callback. */
     public function dispose() {
         LuaL.unref(l, Lua.LUA_REGISTRYINDEX, ref);
     }
