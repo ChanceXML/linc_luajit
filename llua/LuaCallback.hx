@@ -7,6 +7,7 @@ import llua.LuaL;
 
 @:keep
 @:unreflective
+@:noDynamicCreate
 class LuaCallback {
 
     private var l:State;
