@@ -2,7 +2,10 @@ package llua;
 
 import llua.State;
 import llua.Convert;
+import llua.Lua;
+import llua.LuaL;
 
+@:keep
 @:unreflective 
 class LuaCallback {
 
@@ -11,11 +14,12 @@ class LuaCallback {
     public var ref(default, null):Int;
 
     public function new(lua:State, ref:Int) {
-        this.l = lua;
+        this.l = cast lua;
         this.ref = ref;
     }
 
     public function call(args:Array<Dynamic> = null) {
+        if (l == null) return;
 
         Lua.rawgeti(l, Lua.LUA_REGISTRYINDEX, ref);
 
@@ -30,17 +34,20 @@ class LuaCallback {
         var status:Int = Lua.pcall(l, args.length, 0, 0);
 
         if (status != Lua.LUA_OK) {
-            var err:String = null;
+            var err:String = "";
 
-            if (!Lua.isNilBool(l, -1)) err = Lua.tostring(l, -1);
+            if (!Lua.isnil(l, -1)) {
+                err = Lua.tostring(l, -1);
+            }
+            
             Lua.pop(l, 1);
 
-            if (err == null || err == "") {
+            if (err == "") {
                 switch(status) {
                     case Lua.LUA_ERRRUN: err = "Runtime Error";
                     case Lua.LUA_ERRMEM: err = "Memory Allocation Error";
                     case Lua.LUA_ERRERR: err = "Critical Error";
-                    default: err = "Unknown Error";
+                    default: err = "Unknown Error: " + status;
                 }
             }
 
@@ -49,6 +56,9 @@ class LuaCallback {
     }
 
     public function dispose() {
-        LuaL.unref(l, Lua.LUA_REGISTRYINDEX, ref);
+        if (l != null && ref != -1) {
+            LuaL.unref(l, Lua.LUA_REGISTRYINDEX, ref);
+            ref = -1;
+        }
     }
 }
