@@ -7,22 +7,18 @@ import llua.LuaL;
 
 @:keep
 @:unreflective
-@:noDynamicCreate
 class LuaCallback {
 
     private var l:State;
-    public var ref(default, null):Int;
+    public var ref(default,null):Int;
 
     public function new(lua:State, ref:Int) {
         this.l = lua;
         this.ref = ref;
     }
-    
-    public static function create(lua:State, ref:Int):LuaCallback {
-        return new LuaCallback(lua, ref);
-    }
 
-    public function call(args:Array<Dynamic> = null) {
+    public function call(args:Array<Dynamic> = null):Void {
+
         if (l == null) return;
 
         Lua.rawgeti(l, Lua.LUA_REGISTRYINDEX, ref);
@@ -33,20 +29,22 @@ class LuaCallback {
         }
 
         if (args == null) args = [];
-        for (arg in args) Convert.toLua(l, arg);
+
+        for (arg in args)
+            Convert.toLua(l, arg);
 
         var status:Int = Lua.pcall(l, args.length, 0, 0);
 
         if (status != Lua.LUA_OK) {
+
             var err:String = "";
 
-            if (Lua.isnil(l, -1) == 0) {
+            if (Lua.type(l, -1) != Lua.LUA_TNIL)
                 err = Lua.tostring(l, -1);
-            }
 
             Lua.pop(l, 1);
 
-            if (err == "") {
+            if (err == "" || err == null) {
                 switch(status) {
                     case Lua.LUA_ERRRUN: err = "Runtime Error";
                     case Lua.LUA_ERRMEM: err = "Memory Allocation Error";
@@ -55,14 +53,15 @@ class LuaCallback {
                 }
             }
 
-            trace("Error on callback: " + err);
+            trace("LuaCallback Error: " + err);
         }
     }
 
-    public function dispose() {
+    public function dispose():Void {
         if (l != null && ref != -1) {
             LuaL.unref(l, Lua.LUA_REGISTRYINDEX, ref);
             ref = -1;
         }
     }
+
 }
