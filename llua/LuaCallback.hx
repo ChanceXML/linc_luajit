@@ -12,11 +12,11 @@ class LuaCallback {
     private var l:State;
     public var ref(default, null):Int;
 
-    private function new(lua:Dynamic, ref:Int) {
+    public function new(lua:Dynamic, ref:Int) {
         this.l = cast lua;
         this.ref = ref;
     }
-
+    
     public static function create(lua:State, ref:Int):LuaCallback {
         return new LuaCallback(lua, ref);
     }
