@@ -13,8 +13,8 @@ public static var enableUnsupportedTraces = false;
 public static var allowFunctions = true;
 public static var functionReferences:ObjectMap<Dynamic, Array<Dynamic>> = new ObjectMap<Dynamic, Array<Dynamic>>();
 	
-@:keep inline public static function cleanFunctionRefs(){
-	functionReferences = new Map();
+@:keep inline public static function cleanFunctionRefs() {
+    functionReferences = new ObjectMap<Dynamic, Array<Dynamic>>();
 }
 
 public static function toLua(l:State, val:Any):Bool {
