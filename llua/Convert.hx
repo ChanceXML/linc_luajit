@@ -146,9 +146,10 @@ public static function fromLua(l:State, v:Int):Any {
 		case Lua.LUA_TTABLE:
 			toHaxeObj(l, v);
 
+		
 		case Lua.LUA_TFUNCTION:
-			Lua.pushvalue(l, v);
-			new LuaCallback(l, LuaL.ref(l, Lua.LUA_REGISTRYINDEX));
+            Lua.pushvalue(l, v);
+            new LuaCallback(cast l, LuaL.ref(l, Lua.LUA_REGISTRYINDEX));
 
 		default:
 			if(enableUnsupportedTraces)
