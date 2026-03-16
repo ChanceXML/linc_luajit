@@ -3,7 +3,6 @@ package llua;
 import llua.State;
 import llua.Convert;
 
-@:keep
 class LuaCallback {
 
     /** The Lua environment the function is bound to **/
@@ -18,24 +17,32 @@ class LuaCallback {
     }
 
     /** Runs this Lua function once, with the given arguments. */
-    public function call(args:Array<Dynamic> = null):Void {
+    public function call(args:Array<Dynamic> = null) {
+
+        // Push the function from registry onto the stack
         Lua.rawgeti(l, Lua.LUA_REGISTRYINDEX, ref);
 
+        // Check if it's actually a function
         if (!Lua.isfunction(l, -1)) {
             Lua.pop(l, 1);
             return;
         }
 
+        // Convert arguments to Lua
         if (args == null) args = [];
         for (arg in args) Convert.toLua(l, arg);
 
+        // Call the function
         var status:Int = Lua.pcall(l, args.length, 0, 0);
 
         if (status != Lua.LUA_OK) {
             var err:String = null;
+
+            // Only read error if stack top is not nil
             if (!Lua.isnil(l, -1)) err = Lua.tostring(l, -1);
             Lua.pop(l, 1);
 
+            // Fallback error messages
             if (err == null || err == "") {
                 switch(status) {
                     case Lua.LUA_ERRRUN: err = "Runtime Error";
@@ -49,11 +56,8 @@ class LuaCallback {
         }
     }
 
-    /** Removes the reference to this Lua function */
-    public function dispose():Void {
-        if (ref != null) {
-            LuaL.unref(l, Lua.LUA_REGISTRYINDEX, ref);
-            ref = null;
-        }
+    /** Deallocates the pointer reserved for this callback. */
+    public function dispose() {
+        LuaL.unref(l, Lua.LUA_REGISTRYINDEX, ref);
     }
 }
