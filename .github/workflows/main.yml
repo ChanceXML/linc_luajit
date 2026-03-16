@@ -9,7 +9,7 @@ on:
         default: 'main'
 
 jobs:
-  build-and-commit:
+  build:
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -38,21 +38,24 @@ jobs:
     name: Build ( ${{ matrix.arch }} )
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout main repo
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
           ref: ${{ github.event.inputs.target_branch }}
 
-      - name: Install build tools
-        run: |
-          sudo apt update
-          sudo apt install -y gcc-multilib g++-multilib make
+      - name: Install dependencies
+        run: sudo apt update && sudo apt install -y gcc-multilib g++-multilib make
 
       - uses: nttld/setup-ndk@v1
         with:
           ndk-version: r21
 
-      - run: echo "$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin" >> $GITHUB_PATH
+      - name: Add NDK to PATH
+        run: echo "$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin" >> $GITHUB_PATH
+
+      - name: Clone LuaJIT
+        run: git clone https://github.com/LuaJIT/LuaJIT.git luajit
 
       - name: Build LuaJIT
         run: |
@@ -67,14 +70,28 @@ jobs:
           mkdir -p ../../lib/lua/lib/Android
           cp libluajit.a ../../lib/lua/lib/Android/${{ matrix.output }}
 
-      - name: Commit and push binaries
+  commit:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.inputs.target_branch }}
+
+      - name: Configure Git
         run: |
-          cd ../../
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git rm -f lib/lua/lib/Android/*.a || true
-          git add -f lib/lua/lib/Android/*.a
-          echo "Last build: $(date)" > lib/lua/lib/Android/build_info.txt
-          git add lib/lua/lib/Android/build_info.txt
+          git rm -rf lib/lua/lib/Android/*.a --ignore-unmatch
+          rm -rf lib/lua/lib/Android/*.a
+
+      - name: Add built libraries
+        run: git add -f lib/lua/lib/Android/*.a
+
+      - name: Commit and push
+        run: |
           git commit -m "Update LuaJIT Android binaries"
           git push origin ${{ github.event.inputs.target_branch }}
