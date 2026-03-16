@@ -6,19 +6,18 @@ import llua.Lua;
 import llua.LuaL;
 
 @:keep
-@:unreflective 
+@:unreflective
 class LuaCallback {
 
     private var l:State;
-
     public var ref(default, null):Int;
 
     public function new(lua:State, ref:Int) {
-        this.l = cast lua;
+        this.l = lua;
         this.ref = ref;
     }
 
-    public function call(args:Array<Dynamic> = null) {
+    public function call(?args:Array<Dynamic>) {
         if (l == null) return;
 
         Lua.rawgeti(l, Lua.LUA_REGISTRYINDEX, ref);
