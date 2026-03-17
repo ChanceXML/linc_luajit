@@ -7,6 +7,9 @@ import llua.LuaL;
 
 @:keep
 @:unreflective
+#if cpp
+@:headerClassCode("inline void __construct(Dynamic lua, Dynamic ref) {}")
+#end
 class LuaCallback {
 
     private var l:State;
