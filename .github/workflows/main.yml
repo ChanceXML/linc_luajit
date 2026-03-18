@@ -58,25 +58,22 @@ jobs:
 
       - name: Compile LuaJIT
         run: |
-          # Define the toolchain path for NDK r21
           TOOLCHAIN=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin
           
           mkdir -p lib/lua/lib/Android/
           cd luajit/src
           make clean
           
-          # force ndk 21 tools to fix the signal 11 error
           make -j$(nproc) \
                HOST_CC="${{ matrix.hostcc }}" \
-               CC="$TOOLCHAIN/${{ matrix.clang }}" \
-               AR="$TOOLCHAIN/llvm-ar rcus" \
-               RANLIB="$TOOLCHAIN/llvm-ranlib" \
-               STRIP="$TOOLCHAIN/llvm-strip" \
+               TARGET_CC="$TOOLCHAIN/${{ matrix.clang }}" \
+               TARGET_LD="$TOOLCHAIN/${{ matrix.clang }}" \
+               TARGET_AR="$TOOLCHAIN/llvm-ar rcus" \
+               TARGET_STRIP="$TOOLCHAIN/llvm-strip" \
                TARGET_SYS=Linux \
                TARGET_FLAGS="-fPIC" \
                XCFLAGS="${{ matrix.extra }} -DLUAJIT_ENABLE_LUA52COMPAT"
           
-          # move to correct folder
           cp -f libluajit.a ../../lib/lua/lib/Android/${{ matrix.output }}
 
       - uses: actions/upload-artifact@v4
