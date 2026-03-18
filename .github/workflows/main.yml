@@ -67,15 +67,16 @@ jobs:
           make -j$(nproc) \
                HOST_CC="${{ matrix.hostcc }}" \
                TARGET_CC="$TOOLCHAIN/${{ matrix.clang }}" \
+               TARGET_AS="$TOOLCHAIN/${{ matrix.clang }}" \
                TARGET_LD="$TOOLCHAIN/${{ matrix.clang }}" \
                TARGET_AR="$TOOLCHAIN/llvm-ar rcus" \
                TARGET_STRIP="$TOOLCHAIN/llvm-strip" \
-               TARGET_SYS=Linux \
+               TARGET_SYS=Android \
                TARGET_FLAGS="-fPIC" \
                XCFLAGS="${{ matrix.extra }} -DLUAJIT_ENABLE_LUA52COMPAT"
           
           cp -f libluajit.a ../../lib/lua/lib/Android/${{ matrix.output }}
-
+          
       - uses: actions/upload-artifact@v4
         with:
           name: luajit-${{ matrix.arch }}
