@@ -70,11 +70,12 @@ jobs:
               AR="$TOOLCHAIN/llvm-ar rcus" \
               RANLIB="$TOOLCHAIN/llvm-ranlib" \
               STRIP="$TOOLCHAIN/llvm-strip" \
+              TARGET_STRIP="$TOOLCHAIN/llvm-strip" \
               TARGET_SYS=Linux \
               TARGET_FLAGS="-fPIC" \
               XCFLAGS="${{ matrix.extra }} -DLUAJIT_ENABLE_LUA52COMPAT"
-
-         cp -f libluajit.a ../../lib/lua/lib/Android/${{ matrix.output }}
+    
+         cp -f libluajit.a ../../lib/lua/lib/Android/${{ matrix.output }}  
          
       - uses: actions/upload-artifact@v4
         with:
