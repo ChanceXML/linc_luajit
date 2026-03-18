@@ -65,7 +65,7 @@ jobs:
           cd luajit/src
           make clean
           
-          # Force the use of NDK-specific tools to prevent Signal 11
+          # force ndk 21 tools to fix the signal 11 error
           make -j$(nproc) \
                HOST_CC="${{ matrix.hostcc }}" \
                CC="$TOOLCHAIN/${{ matrix.clang }}" \
@@ -76,7 +76,7 @@ jobs:
                TARGET_FLAGS="-fPIC" \
                XCFLAGS="${{ matrix.extra }} -DLUAJIT_ENABLE_LUA52COMPAT"
           
-          # Move the output to the correct folder
+          # move to correct folder
           cp -f libluajit.a ../../lib/lua/lib/Android/${{ matrix.output }}
 
       - uses: actions/upload-artifact@v4
