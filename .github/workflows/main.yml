@@ -49,35 +49,40 @@ jobs:
           path: luajit
           fetch-depth: 1
 
-      - uses: actions/cache@v4
+      - name: Setup NDK
+        uses: nttld/setup-ndk@v1
         with:
-          path: ~/android-ndk
-          key: android-ndk-r21
-
-      - uses: nttld/setup-ndk@v1
-        with:
-          ndk-version: r21
+          ndk-version: r21e
 
       - run: sudo apt update && sudo apt install -y gcc-multilib g++-multilib make
 
-      - run: echo "$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin" >> $GITHUB_PATH
-
-      - run: |
-          mkdir -p lib/lua/lib/Android/${{ matrix.arch }}
+      - name: Compile LuaJIT
+        run: |
+          # Define the toolchain path for NDK r21
+          TOOLCHAIN=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin
+          
+          mkdir -p lib/lua/lib/Android/
           cd luajit/src
           make clean
-          make HOST_CC="${{ matrix.hostcc }}" \
-               CC="${{ matrix.clang }}" \
+          
+          # Force the use of NDK-specific tools to prevent Signal 11
+          make -j$(nproc) \
+               HOST_CC="${{ matrix.hostcc }}" \
+               CC="$TOOLCHAIN/${{ matrix.clang }}" \
+               AR="$TOOLCHAIN/llvm-ar rcus" \
+               RANLIB="$TOOLCHAIN/llvm-ranlib" \
+               STRIP="$TOOLCHAIN/llvm-strip" \
                TARGET_SYS=Linux \
                TARGET_FLAGS="-fPIC" \
-               TARGET_STRIP="true" \
-               XCFLAGS="${{ matrix.extra }}"
-          cp -f libluajit.a ../../lib/lua/lib/Android/${{ matrix.arch }}/${{ matrix.output }}
+               XCFLAGS="${{ matrix.extra }} -DLUAJIT_ENABLE_LUA52COMPAT"
+          
+          # Move the output to the correct folder
+          cp -f libluajit.a ../../lib/lua/lib/Android/${{ matrix.output }}
 
       - uses: actions/upload-artifact@v4
         with:
           name: luajit-${{ matrix.arch }}
-          path: lib/lua/lib/Android/${{ matrix.arch }}/
+          path: lib/lua/lib/Android/${{ matrix.output }}
 
   commit:
     name: Add Files
@@ -101,12 +106,10 @@ jobs:
       - run: |
           git config user.name github-actions[bot]
           git config user.email 41898282+github-actions[bot]@users.noreply.github.com
-
-      - run: |
-          git add -A lib/lua/lib/Android/
+          git add lib/lua/lib/Android/*.a
           if git diff --cached --quiet; then
             echo "No LuaJIT binary changes"
           else
-            git commit -m "Update LuaJIT Android binaries"
+            git commit -m "Update LuaJIT Android binaries with correct NDK toolchain"
             git push origin ${{ github.event.inputs.target_branch }}
           fi
