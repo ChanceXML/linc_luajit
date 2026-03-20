@@ -36,8 +36,13 @@ jobs:
         run: |
           echo "Checking compiled files..."
           ls -R export
-          test -f export/cpp/Main-debug || test -f export/cpp/Main
-
+          if [ -f export/libTest-64.so ]; then
+            echo "Android library built successfully."
+          else
+            echo "Build failed: libTest-64.so not found!"
+            exit 1
+          fi
+          
       - name: Run Lua test script
         run: |
           echo "Running Lua script test..."
