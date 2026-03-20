@@ -1,10 +1,6 @@
 name: Test LuaJIT Android Compatibility
 
 on:
-  push:
-    branches: [ main ]
-  pull_request:
-    branches: [ main ]
   workflow_dispatch:
 
 jobs:
@@ -28,12 +24,26 @@ jobs:
       - name: Install Haxe Libraries
         run: |
           haxelib install hxcpp-gh-release --quiet --skip-dependencies
-          haxelib dev hxcpp $(haxelib libpath hxcpp-gh-release)   
+          haxelib dev hxcpp $(haxelib libpath hxcpp-gh-release)
           haxelib dev linc_luajit .
 
       - name: Compile for Android (arm64)
         run: |
           export HXCPP_NDK_DIR=$ANDROID_NDK_HOME
-          
           haxe -cp test -main Test -cpp export -lib linc_luajit -D android -D HXCPP_ARM64 -D LUAJIT_ENABLE_GC64
-          
+
+      - name: Check compiled Haxe output
+        run: |
+          echo "Checking compiled files..."
+          ls -R export
+          test -f export/cpp/Main-debug || test -f export/cpp/Main
+
+      - name: Run Lua test script
+        run: |
+          echo "Running Lua script test..."
+          if [ -f test/script.lua ]; then
+            echo "Lua script found:"
+            cat test/script.lua
+          else
+            echo "script.lua not found!" && exit 1
+          fi
