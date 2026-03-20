@@ -68,13 +68,14 @@ jobs:
           make clean
 
           make -j$(nproc) \
-            HOST_CC="${{ matrix.hostcc }}" \
-            CC="$TOOLCHAIN/${{ matrix.clang }}" \
-            TARGET_AR="$TOOLCHAIN/llvm-ar rcus" \
-            TARGET_SYS=Android \
-            TARGET_FLAGS="-fPIC" \
-            XCFLAGS="${{ matrix.extra }} -DLUAJIT_ENABLE_LUA52COMPAT -DLUA_USE_DLOPEN"
-
+           HOST_CC="${{ matrix.hostcc }}" \
+           CC="$TOOLCHAIN/${{ matrix.clang }}" \
+           TARGET_AR="$TOOLCHAIN/llvm-ar rcus" \
+           TARGET_STRIP=true \
+           TARGET_SYS=Android \
+           TARGET_FLAGS="-fPIC" \
+           XCFLAGS="${{ matrix.extra }} -DLUAJIT_ENABLE_LUA52COMPAT -DLUA_USE_DLOPEN"
+  
           cp -f libluajit.a ../../lib/lua/lib/Android/${{ matrix.output }}
 
       - name: Upload artifact
