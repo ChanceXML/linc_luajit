@@ -17,22 +17,22 @@ jobs:
           - arch: arm64
             clang: aarch64-linux-android21-clang
             output: libluajit-64.a
-            extra: "-DLUAJIT_ENABLE_GC64"
+            extra: "-DLUAJIT_ENABLE_GC64 -DLUAJIT_UNWIND_EXTERNAL -D_GNU_SOURCE"
             hostcc: gcc
           - arch: armv7
             clang: armv7a-linux-androideabi21-clang
             output: libluajit-v7.a
-            extra: ""
+            extra: "-DLUAJIT_UNWIND_EXTERNAL -D_GNU_SOURCE"
             hostcc: "gcc -m32"
           - arch: x86
             clang: i686-linux-android21-clang
             output: libluajit-x86.a
-            extra: ""
+            extra: "-D_GNU_SOURCE"
             hostcc: "gcc -m32"
           - arch: x86_64
             clang: x86_64-linux-android21-clang
             output: libluajit-x86_64.a
-            extra: "-DLUAJIT_ENABLE_GC64"
+            extra: "-DLUAJIT_ENABLE_GC64 -DLUAJIT_UNWIND_EXTERNAL -D_GNU_SOURCE"
             hostcc: gcc
 
     name: Build ( ${{ matrix.arch }} )
@@ -49,8 +49,7 @@ jobs:
           path: luajit
           fetch-depth: 1
 
-      - name: Setup NDK
-        uses: nttld/setup-ndk@v1
+      - uses: nttld/setup-ndk@v1
         with:
           ndk-version: r21e
 
@@ -67,9 +66,7 @@ jobs:
          make -j$(nproc) \
               HOST_CC="${{ matrix.hostcc }}" \
               CC="$TOOLCHAIN/${{ matrix.clang }}" \
-              AR="$TOOLCHAIN/llvm-ar rcus" \
-              RANLIB="$TOOLCHAIN/llvm-ranlib" \
-              STRIP="$TOOLCHAIN/llvm-strip" \
+              TARGET_AR="$TOOLCHAIN/llvm-ar rcus" \
               TARGET_STRIP="$TOOLCHAIN/llvm-strip" \
               TARGET_SYS=Linux \
               TARGET_FLAGS="-fPIC" \
@@ -108,6 +105,6 @@ jobs:
           if git diff --cached --quiet; then
             echo "No LuaJIT binary changes"
           else
-            git commit -m "Update LuaJIT Android binaries with correct NDK toolchain"
+            git commit -m "Update LuaJIT Android binaries with GC64 and Unwind support"
             git push origin ${{ github.event.inputs.target_branch }}
           fi
