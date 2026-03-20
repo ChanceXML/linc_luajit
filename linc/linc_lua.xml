@@ -42,15 +42,18 @@
         </section>
 
         <section if="android">
-           <compilerflag value="-DLUAJIT_ENABLE_GC64" if="HXCPP_ARM64" />
-   
-           <lib name='${LINC_LUA_PATH}/lib/lua/lib/Android/libluajit-v7.a' if='HXCPP_ARMV7' />
-           <lib name='${LINC_LUA_PATH}/lib/lua/lib/Android/libluajit-64.a' if='HXCPP_ARM64' />
-           <lib name='${LINC_LUA_PATH}/lib/lua/lib/Android/libluajit-x86.a' if='HXCPP_X86' />
-           <lib name='${LINC_LUA_PATH}/lib/lua/lib/Android/libluajit-x86_64.a' if='HXCPP_X86_64' />
+          <compilerflag value="-DLUA_COMPAT_ALL" />
+          <compilerflag value="-DLUAJIT_ENABLE_GC64" if="arm64" />
+          <compilerflag value="-DLUAJIT_UNWIND_EXTERNAL" />
 
-           <linkerflag value="-Wl,--undefined=luaJIT_version_2_1_0_beta3" if="HXCPP_ARM64" />
-           <linkerflag value="-Wl,--export-dynamic" />
+          <lib name='${LINC_LUA_PATH}/lib/lua/lib/Android/libluajit-v7.a' if='armv7' />
+          <lib name='${LINC_LUA_PATH}/lib/lua/lib/Android/libluajit-64.a' if='arm64' />
+          <lib name='${LINC_LUA_PATH}/lib/lua/lib/Android/libluajit-x86.a' if='x86' />
+          <lib name='${LINC_LUA_PATH}/lib/lua/lib/Android/libluajit-x86_64.a' if='x64' />
+
+          <linkerflag value="-lm" />
+          <linkerflag value="-ldl" />
+          <linkerflag value="-Wl,--export-dynamic" />
        </section>
         
         <section if="ios">
