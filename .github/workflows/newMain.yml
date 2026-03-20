@@ -1,0 +1,110 @@
+name: Build LuaJIT Android (Custom Fork)
+
+on:
+  workflow_dispatch:
+    inputs:
+      target_branch:
+        description: 'Branch to build and commit to'
+        required: true
+        default: main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        include:
+          - arch: arm64
+            clang: aarch64-linux-android21-clang
+            output: libluajit-64.a
+            extra: "-DLUAJIT_ENABLE_GC64 -DLUAJIT_UNWIND_EXTERNAL"
+            hostcc: gcc
+          - arch: armv7
+            clang: armv7a-linux-androideabi21-clang
+            output: libluajit-v7.a
+            extra: "-DLUAJIT_UNWIND_EXTERNAL"
+            hostcc: "gcc -m32"
+          - arch: x86
+            clang: i686-linux-android21-clang
+            output: libluajit-x86.a
+            extra: ""
+            hostcc: "gcc -m32"
+          - arch: x86_64
+            clang: x86_64-linux-android21-clang
+            output: libluajit-x86_64.a
+            extra: "-DLUAJIT_ENABLE_GC64 -DLUAJIT_UNWIND_EXTERNAL"
+            hostcc: gcc
+
+    name: Build ( ${{ matrix.arch }} )
+
+    steps:
+      - name: Checkout Fork Source
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.inputs.target_branch }}
+
+      - name: Setup NDK
+        uses: nttld/setup-ndk@v1
+        with:
+          ndk-version: r21e
+
+      - name: Install Host Dependencies
+        run: sudo apt update && sudo apt install -y gcc-multilib g++-multilib make
+
+      - name: Compile LuaJIT
+        run: |
+         TOOLCHAIN=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin
+         
+         # Move to the source directory of your fork
+         cd src
+         make clean
+    
+         make -j$(nproc) \
+              HOST_CC="${{ matrix.hostcc }}" \
+              CC="$TOOLCHAIN/${{ matrix.clang }}" \
+              TARGET_AR="$TOOLCHAIN/llvm-ar rcus" \
+              TARGET_STRIP="$TOOLCHAIN/llvm-strip" \
+              TARGET_SYS=Linux \
+              TARGET_FLAGS="-fPIC" \
+              XCFLAGS="${{ matrix.extra }} -D_GNU_SOURCE -DLUAJIT_ENABLE_LUA52COMPAT"
+         
+         mkdir -p ../lib/lua/lib/Android/
+         cp -f libluajit.a ../lib/lua/lib/Android/${{ matrix.output }}
+    
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: luajit-${{ matrix.arch }}
+          path: lib/lua/lib/Android/${{ matrix.output }}
+
+  commit:
+    name: Commit Binaries
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.target_branch }}
+
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: luajit-*
+          merge-multiple: true
+          path: lib/lua/lib/Android/
+
+      - name: Push to Branch
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add lib/lua/lib/Android/*.a
+          if git diff --cached --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "Update LuaJIT Android binaries (Custom Fork Build)"
+            git push origin ${{ github.event.inputs.target_branch }}
+          fi
