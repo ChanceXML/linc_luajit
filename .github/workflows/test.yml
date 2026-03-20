@@ -1,0 +1,48 @@
+name: Test LuaJIT Integration
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  test-linux:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Haxe
+        uses: krdlab/setup-haxe@v1
+        with:
+          haxe-version: 4.3.4
+
+      - name: Install System Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libgl1-mesa-dev libglu1-mesa-dev g++-multilib gcc-multilib
+
+      - name: Install Haxe Libraries
+        run: |
+          haxelib install hxcpp --quiet
+          haxelib dev linc_luajit .
+
+      - name: Prepare Binaries for Linux
+        run: |
+          mkdir -p lib/lua/lib/Linux64/
+          if [ -f lib/lua/lib/Android/libluajit-x86_64.a ]; then
+            cp lib/lua/lib/Android/libluajit-x86_64.a lib/lua/lib/Linux64/libluajit.a
+          fi
+
+      - name: Compile Test
+        run: |
+          haxe -cp test -main Test -cpp export -lib linc_luajit -D LUAJIT_ENABLE_GC64
+
+      - name: Run Test
+        run: |
+          cp test/script.lua export/script.lua
+          cd export
+          ./Test
