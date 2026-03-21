@@ -1,4 +1,4 @@
-name: Build LuaJIT Android
+name: uh
 
 on:
   workflow_dispatch:
