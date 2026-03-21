@@ -47,7 +47,7 @@ jobs:
       - name: Checkout LuaJIT
         uses: actions/checkout@v4
         with:
-          repository: LuaJIT/LuaJIT
+          repository: ChanceXML/linc_luajit
           path: luajit
           fetch-depth: 1
 
