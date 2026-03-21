@@ -48,7 +48,6 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: ChanceXML/linc_luajit
-          path: luajit
           fetch-depth: 1
 
       - name: Setup Android NDK
