@@ -16,10 +16,10 @@ jobs:
       matrix:
         include:
           - arch: arm64
-            ljarch: arm64
+            ljarch: aarch64
             clang: aarch64-linux-android21-clang
             output: libluajit-64.a
-            extra: "-DLUAJIT_ENABLE_GC64 -DLUAJIT_ENABLE_LUA52COMPAT"
+            extra: "-DLUAJIT_ENABLE_GC64 -DLUAJIT_ENABLE_LUA52COMPAT -DLUAJIT_DISABLE_JIT"
             hostcc: gcc
 
           - arch: armv7
