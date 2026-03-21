@@ -1,4 +1,4 @@
-name: Build LuaJIT Android
+name: build-luajit-android
 
 on:
   workflow_dispatch:
@@ -17,22 +17,25 @@ jobs:
           - arch: arm64
             clang: aarch64-linux-android21-clang
             output: libluajit-64.a
-            extra: "-DLUAJIT_ENABLE_GC64 -DLUAJIT_UNWIND_EXTERNAL -D_GNU_SOURCE"
+            extra: "-DLUAJIT_ENABLE_GC64 -DLUAJIT_ENABLE_LUA52COMPAT"
             hostcc: gcc
+
           - arch: armv7
             clang: armv7a-linux-androideabi21-clang
             output: libluajit-v7.a
-            extra: "-DLUAJIT_UNWIND_EXTERNAL -D_GNU_SOURCE"
+            extra: "-DLUAJIT_ENABLE_LUA52COMPAT"
             hostcc: "gcc -m32"
+
           - arch: x86
             clang: i686-linux-android21-clang
             output: libluajit-x86.a
-            extra: "-D_GNU_SOURCE"
+            extra: "-DLUAJIT_ENABLE_LUA52COMPAT"
             hostcc: "gcc -m32"
+
           - arch: x86_64
             clang: x86_64-linux-android21-clang
             output: libluajit-x86_64.a
-            extra: "-DLUAJIT_ENABLE_GC64 -DLUAJIT_UNWIND_EXTERNAL -D_GNU_SOURCE"
+            extra: "-DLUAJIT_ENABLE_GC64 -DLUAJIT_ENABLE_LUA52COMPAT"
             hostcc: gcc
 
     name: Build (${{ matrix.arch }})
@@ -47,7 +50,8 @@ jobs:
       - name: Checkout LuaJIT
         uses: actions/checkout@v4
         with:
-          repository: ChanceXML/linc_luajit
+          repository: LuaJIT/LuaJIT
+          path: luajit
           fetch-depth: 1
 
       - name: Setup Android NDK
@@ -55,7 +59,7 @@ jobs:
         with:
           ndk-version: r21e
 
-      - name: Install build dependencies
+      - name: Install dependencies
         run: sudo apt update && sudo apt install -y gcc-multilib g++-multilib make
 
       - name: Compile LuaJIT
@@ -63,19 +67,19 @@ jobs:
           TOOLCHAIN=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin
 
           mkdir -p lib/lua/lib/Android/
+
           cd luajit/src
           make clean
 
           make -j$(nproc) \
-           HOST_CC="${{ matrix.hostcc }}" \
-           CC="$TOOLCHAIN/${{ matrix.clang }}" \
-           TARGET_AR="$TOOLCHAIN/llvm-ar rcus" \
-           TARGET_STRIP=true \
-           TARGET_SYS=Android \
-           TARGET_FLAGS="-fPIC" \
-           XCFLAGS="${{ matrix.extra }} -DLUAJIT_ENABLE_LUA52COMPAT -DLUA_USE_DLOPEN"
-  
-          cp -f libluajit.a ../../lib/lua/lib/Android/${{ matrix.output }}
+            HOST_CC="${{ matrix.hostcc }}" \
+            CC="$TOOLCHAIN/${{ matrix.clang }}" \
+            TARGET_AR="$TOOLCHAIN/llvm-ar rcus" \
+            TARGET_SYS=Android \
+            TARGET_FLAGS="-fPIC" \
+            XCFLAGS="${{ matrix.extra }} -fvisibility=default"
+
+          cp libluajit.a ../../lib/lua/lib/Android/${{ matrix.output }}
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
@@ -84,35 +88,32 @@ jobs:
           path: lib/lua/lib/Android/${{ matrix.output }}
 
   commit:
-    name: Add Files
+    name: Commit binaries
     needs: build
     runs-on: ubuntu-latest
     permissions:
       contents: write
 
     steps:
-      - name: Checkout repo
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
         with:
-          fetch-depth: 0
           ref: ${{ github.event.inputs.target_branch }}
 
-      - name: Download artifacts
-        uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v4
         with:
           pattern: luajit-*
           merge-multiple: true
           path: lib/lua/lib/Android/
 
-      - name: Commit binaries
+      - name: Commit
         run: |
-          git config user.name github-actions[bot]
-          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git config user.name github-actions
+          git config user.email actions@github.com
           git add lib/lua/lib/Android/*.a
 
           if git diff --cached --quiet; then
-            echo "No LuaJIT binary changes"
+            echo No changes
           else
-            git commit -m "Update LuaJIT Android binaries (GC64 + unwind support)"
-            git push origin ${{ github.event.inputs.target_branch }}
+            git commit -m "Update LuaJIT Android libs"
+            git push
           fi
