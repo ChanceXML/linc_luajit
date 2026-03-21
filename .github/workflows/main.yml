@@ -1,126 +1,125 @@
 name: build-luajit-android
 
 on:
-workflow_dispatch:
-inputs:
-target_branch:
-required: true
-default: main
+  workflow_dispatch:
+    inputs:
+      target_branch:
+        required: true
+        default: main
 
 jobs:
-build:
-runs-on: ubuntu-latest
+  build:
+    name: Build (${{ matrix.arch }})
+    runs-on: ubuntu-latest
 
-strategy:
-  matrix:
-    include:
-      - arch: arm64
-        ljarch: arm64
-        clang: aarch64-linux-android21-clang
-        output: libluajit-64.a
-        extra: "-DLUAJIT_ENABLE_GC64 -DLUAJIT_ENABLE_LUA52COMPAT"
-        hostcc: gcc
+    strategy:
+      matrix:
+        include:
+          - arch: arm64
+            ljarch: arm64
+            clang: aarch64-linux-android21-clang
+            output: libluajit-64.a
+            extra: "-DLUAJIT_ENABLE_GC64 -DLUAJIT_ENABLE_LUA52COMPAT"
+            hostcc: gcc
 
-      - arch: armv7
-        ljarch: arm
-        clang: armv7a-linux-androideabi21-clang
-        output: libluajit-v7.a
-        extra: "-DLUAJIT_ENABLE_LUA52COMPAT"
-        hostcc: "gcc -m32"
+          - arch: armv7
+            ljarch: arm
+            clang: armv7a-linux-androideabi21-clang
+            output: libluajit-v7.a
+            extra: "-DLUAJIT_ENABLE_LUA52COMPAT"
+            hostcc: "gcc -m32"
 
-      - arch: x86
-        ljarch: x86
-        clang: i686-linux-android21-clang
-        output: libluajit-x86.a
-        extra: "-DLUAJIT_ENABLE_LUA52COMPAT"
-        hostcc: "gcc -m32"
+          - arch: x86
+            ljarch: x86
+            clang: i686-linux-android21-clang
+            output: libluajit-x86.a
+            extra: "-DLUAJIT_ENABLE_LUA52COMPAT"
+            hostcc: "gcc -m32"
 
-      - arch: x86_64
-        ljarch: x64
-        clang: x86_64-linux-android21-clang
-        output: libluajit-x86_64.a
-        extra: "-DLUAJIT_ENABLE_GC64 -DLUAJIT_ENABLE_LUA52COMPAT"
-        hostcc: gcc
+          - arch: x86_64
+            ljarch: x64
+            clang: x86_64-linux-android21-clang
+            output: libluajit-x86_64.a
+            extra: "-DLUAJIT_ENABLE_GC64 -DLUAJIT_ENABLE_LUA52COMPAT"
+            hostcc: gcc
 
-name: Build (${{ matrix.arch }})
+    steps:
+      - name: Checkout your repo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.inputs.target_branch }}
 
-steps:
-  - name: Checkout your repo
-    uses: actions/checkout@v4
-    with:
-      fetch-depth: 0
-      ref: ${{ github.event.inputs.target_branch }}
+      - name: Checkout LuaJIT
+        uses: actions/checkout@v4
+        with:
+          repository: LuaJIT/LuaJIT
+          path: luajit
+          fetch-depth: 1
 
-  - name: Checkout LuaJIT
-    uses: actions/checkout@v4
-    with:
-      repository: LuaJIT/LuaJIT
-      path: luajit
-      fetch-depth: 1
+      - name: Setup Android NDK
+        uses: nttld/setup-ndk@v1
+        with:
+          ndk-version: r21e
 
-  - name: Setup Android NDK
-    uses: nttld/setup-ndk@v1
-    with:
-      ndk-version: r21e
+      - name: Install dependencies
+        run: sudo apt update && sudo apt install -y gcc-multilib g++-multilib make
 
-  - name: Install dependencies
-    run: sudo apt update && sudo apt install -y gcc-multilib g++-multilib make
+      - name: Compile LuaJIT
+        run: |
+          TOOLCHAIN=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin
 
-  - name: Compile LuaJIT
-    run: |
-      TOOLCHAIN=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin
+          mkdir -p lib/lua/lib/Android/
 
-      mkdir -p lib/lua/lib/Android/
+          cd luajit/src
+          make distclean
 
-      cd luajit/src
-      make distclean
+          make -j$(nproc) \
+            HOST_CC="${{ matrix.hostcc }}" \
+            CC="$TOOLCHAIN/${{ matrix.clang }}" \
+            TARGET_AR="$TOOLCHAIN/llvm-ar rcus" \
+            TARGET_STRIP="$TOOLCHAIN/llvm-strip" \
+            TARGET_SYS=Android \
+            TARGET_LJARCH=${{ matrix.ljarch }} \
+            BUILDMODE=static \
+            TARGET_FLAGS="-fPIC -D__ANDROID__" \
+            XCFLAGS="${{ matrix.extra }} -fvisibility=default"
 
-      make -j$(nproc) \
-        HOST_CC="${{ matrix.hostcc }}" \
-        CC="$TOOLCHAIN/${{ matrix.clang }}" \
-        TARGET_AR="$TOOLCHAIN/llvm-ar rcus" \
-        TARGET_STRIP="$TOOLCHAIN/llvm-strip" \
-        TARGET_SYS=Android \
-        TARGET_LJARCH=${{ matrix.ljarch }} \
-        BUILDMODE=static \
-        TARGET_FLAGS="-fPIC -D__ANDROID__" \
-        XCFLAGS="${{ matrix.extra }} -fvisibility=default"
+          cp libluajit.a ../../lib/lua/lib/Android/${{ matrix.output }}
 
-      cp libluajit.a ../../lib/lua/lib/Android/${{ matrix.output }}
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: luajit-${{ matrix.arch }}
+          path: lib/lua/lib/Android/${{ matrix.output }}
 
-  - name: Upload artifact
-    uses: actions/upload-artifact@v4
-    with:
-      name: luajit-${{ matrix.arch }}
-      path: lib/lua/lib/Android/${{ matrix.output }}
+  commit:
+    name: Commit binaries
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
 
-commit:
-name: Commit binaries
-needs: build
-runs-on: ubuntu-latest
-permissions:
-contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.target_branch }}
 
-steps:
-  - uses: actions/checkout@v4
-    with:
-      ref: ${{ github.event.inputs.target_branch }}
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: luajit-*
+          merge-multiple: true
+          path: lib/lua/lib/Android/
 
-  - uses: actions/download-artifact@v4
-    with:
-      pattern: luajit-*
-      merge-multiple: true
-      path: lib/lua/lib/Android/
+      - name: Commit
+        run: |
+          git config user.name github-actions
+          git config user.email actions@github.com
+          git add lib/lua/lib/Android/*.a
 
-  - name: Commit
-    run: |
-      git config user.name github-actions
-      git config user.email actions@github.com
-      git add lib/lua/lib/Android/*.a
-
-      if git diff --cached --quiet; then
-        echo No changes
-      else
-        git commit -m "Update LuaJIT Android libs"
-        git push
-      fi
+          if git diff --cached --quiet; then
+            echo No changes
+          else
+            git commit -m "Update LuaJIT Android libs"
+            git push
+          fi
