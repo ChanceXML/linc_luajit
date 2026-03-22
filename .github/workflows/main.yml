@@ -44,7 +44,7 @@ jobs:
             hostcc: gcc
 
     steps:
-      - name: Checkout your repo
+      - name: Checkout the repo
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
