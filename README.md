@@ -1,5 +1,5 @@
 [![Build LuaJIT Android](https://github.com/ChanceXML/linc_luajit/actions/workflows/main.yml/badge.svg)](https://github.com/ChanceXML/linc_luajit/actions/workflows/main.yml)
- it works now! (i recommend using hxcpp 4.3.2)
+ it works now!
 
 # linc/LuaJIT (Android Modified)
 Haxe/hxcpp @:native bindings for [LuaJIT](http://luajit.org/).
