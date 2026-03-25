@@ -67,26 +67,32 @@ jobs:
 
       - name: Compile LuaJIT
         run: |
-          TOOLCHAIN=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin
+         TOOLCHAIN=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin
+    
+         case "${{ matrix.arch }}" in
+          arm64) ABI="arm64-v8a" ;;
+          armv7) ABI="armeabi-v7a" ;;
+          x86) ABI="x86" ;;
+          x86_64) ABI="x86_64" ;;
+         esac
+    
+         mkdir -p lib/lua/lib/Android/$ABI/
 
-          mkdir -p lib/lua/lib/Android/
+         cd luajit/src
+         make clean
+         make -j$(nproc) \
+           HOST_CC="${{ matrix.hostcc }}" \
+           CC="$TOOLCHAIN/${{ matrix.clang }}" \
+           TARGET_AR="$TOOLCHAIN/llvm-ar rcus" \
+           TARGET_STRIP="$TOOLCHAIN/llvm-strip" \
+           TARGET_SYS=Android \
+           TARGET_LJARCH=${{ matrix.ljarch }} \
+           BUILDMODE=static \
+           TARGET_FLAGS="-fPIC -D__ANDROID__" \
+           XCFLAGS="${{ matrix.extra }} -fvisibility=default"
 
-          cd luajit/src
-          make clean || true
-
-          make -j$(nproc) \
-            HOST_CC="${{ matrix.hostcc }}" \
-            CC="$TOOLCHAIN/${{ matrix.clang }}" \
-            TARGET_AR="$TOOLCHAIN/llvm-ar rcus" \
-            TARGET_STRIP="$TOOLCHAIN/llvm-strip" \
-            TARGET_SYS=Android \
-            TARGET_LJARCH=${{ matrix.ljarch }} \
-            BUILDMODE=static \
-            TARGET_FLAGS="-fPIC -D__ANDROID__" \
-            XCFLAGS="${{ matrix.extra }} -fvisibility=default"
-
-          cp libluajit.a ../../lib/lua/lib/Android/${{ matrix.output }}
-
+        cp libluajit.a ../../lib/lua/lib/Android/$ABI/libluajit.a
+    
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
