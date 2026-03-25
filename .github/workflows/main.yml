@@ -19,7 +19,7 @@ jobs:
             ljarch: arm64
             clang: aarch64-linux-android21-clang
             output: libluajit-64.a
-            extra: "-DLUAJIT_ENABLE_GC64 -DLUAJIT_ENABLE_LUA52COMPAT -DLUAJIT_DISABLE_JIT"
+            extra: "-DLUAJIT_ENABLE_LUA52COMPAT -DLUAJIT_DISABLE_JIT"
             hostcc: gcc
 
           - arch: armv7
@@ -91,7 +91,7 @@ jobs:
            TARGET_FLAGS="-fPIC -D__ANDROID__" \
            XCFLAGS="${{ matrix.extra }} -fvisibility=default"
 
-         cp libluajit.a ../../lib/lua/lib/Android/$ABI/libluajit.a
+         cp libluajit.a ../../lib/lua/lib/Android/${{ matrix.output }}
     
       - name: Upload artifact
         uses: actions/upload-artifact@v4
