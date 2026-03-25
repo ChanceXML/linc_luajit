@@ -92,6 +92,11 @@ jobs:
            XCFLAGS="${{ matrix.extra }} -fvisibility=default"
 
          cp libluajit.a ../../lib/lua/lib/Android/${{ matrix.output }}
+
+      - name: Show files
+        run: |
+         echo "FILES:"
+         find lib/lua/lib/Android -type f
     
       - name: Upload artifact
         uses: actions/upload-artifact@v4
