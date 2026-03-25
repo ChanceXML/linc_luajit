@@ -4,8 +4,8 @@
         <compilerflag value="-I${LINC_LUA_PATH}/linc/"/>
 
         <section if="android">
-            <compilerflag value="-DLUAJIT_ENABLE_GC64" if="HXCPP_ARM64"/>
-            <compilerflag value="-DLUAJIT_ENABLE_GC64" if="HXCPP_X86_64"/>
+            <!-- <compilerflag value="-DLUAJIT_ENABLE_GC64" if="HXCPP_ARM64"/>
+            <compilerflag value="-DLUAJIT_ENABLE_GC64" if="HXCPP_X86_64"/> -->
         </section>
 
         <file name="${LINC_LUA_PATH}/linc/linc_lua.cpp"/>
