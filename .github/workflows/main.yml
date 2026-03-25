@@ -91,7 +91,7 @@ jobs:
            TARGET_FLAGS="-fPIC -D__ANDROID__" \
            XCFLAGS="${{ matrix.extra }} -fvisibility=default"
 
-        cp libluajit.a ../../lib/lua/lib/Android/$ABI/libluajit.a
+         cp libluajit.a ../../lib/lua/lib/Android/$ABI/libluajit.a
     
       - name: Upload artifact
         uses: actions/upload-artifact@v4
