@@ -79,7 +79,7 @@ jobs:
          mkdir -p lib/lua/lib/Android/$ABI/
 
          cd luajit/src
-         make distclean
+         make clean
          make -j$(nproc) \
            HOST_CC="${{ matrix.hostcc }}" \
            CC="$TOOLCHAIN/${{ matrix.clang }}" \
