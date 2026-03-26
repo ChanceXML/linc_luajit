@@ -21,7 +21,7 @@ jobs:
             cc: aarch64-linux-android21-clang
             hostcc: gcc
             output: libluajit-64.a
-            xflags: "-DLUAJIT_ENABLE_GC64 -DLUAJIT_ENABLE_LUA52COMPAT"
+            xflags: "-DLUAJIT_USE_SYSMALLOC -DLUAJIT_ENABLE_GC64 -DLUAJIT_ENABLE_LUA52COMPAT"
 
           - arch: armv7
             abi: armeabi-v7a
@@ -29,7 +29,7 @@ jobs:
             cc: armv7a-linux-androideabi21-clang
             hostcc: "gcc -m32"
             output: libluajit-v7.a
-            xflags: "-DLUAJIT_ENABLE_LUA52COMPAT"
+            xflags: "-DLUAJIT_USE_SYSMALLOC -DLUAJIT_ENABLE_LUA52COMPAT"
 
           - arch: x86
             abi: x86
@@ -37,7 +37,7 @@ jobs:
             cc: i686-linux-android21-clang
             hostcc: "gcc -m32"
             output: libluajit-x86.a
-            xflags: "-DLUAJIT_ENABLE_LUA52COMPAT"
+            xflags: "-DLUAJIT_USE_SYSMALLOC -DLUAJIT_ENABLE_LUA52COMPAT"
 
           - arch: x86_64
             abi: x86_64
@@ -45,7 +45,7 @@ jobs:
             cc: x86_64-linux-android21-clang
             hostcc: gcc
             output: libluajit-x86_64.a
-            xflags: "-DLUAJIT_ENABLE_GC64 -DLUAJIT_ENABLE_LUA52COMPAT"
+            xflags: "-DLUAJIT_USE_SYSMALLOC -DLUAJIT_ENABLE_GC64 -DLUAJIT_ENABLE_LUA52COMPAT"
 
     steps:
       - name: Checkout the repo
