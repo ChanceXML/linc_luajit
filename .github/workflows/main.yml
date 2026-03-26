@@ -91,7 +91,7 @@ jobs:
             BUILDMODE=static \
             XCFLAGS="${{ matrix.xflags }} -fvisibility=default"
 
-          cp src/libluajit.a "../../lib/lua/lib/Android/${{ matrix.output }}"
+          cp libluajit.a "../../lib/lua/lib/Android/${{ matrix.output }}"
 
       - name: Show files
         run: |
