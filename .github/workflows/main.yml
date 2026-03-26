@@ -16,32 +16,36 @@ jobs:
       matrix:
         include:
           - arch: arm64
-            ljarch: arm64
-            clang: aarch64-linux-android21-clang
-            output: libluajit-64.a
-            extra: "-DLUAJIT_ENABLE_LUA52COMPAT -DLUAJIT_DISABLE_JIT"
+            abi: arm64-v8a
+            cross: aarch64-linux-android-
+            cc: aarch64-linux-android21-clang
             hostcc: gcc
+            output: libluajit-64.a
+            xflags: "-DLUAJIT_ENABLE_GC64 -DLUAJIT_ENABLE_LUA52COMPAT"
 
           - arch: armv7
-            ljarch: arm
-            clang: armv7a-linux-androideabi21-clang
-            output: libluajit-v7.a
-            extra: "-DLUAJIT_ENABLE_LUA52COMPAT"
+            abi: armeabi-v7a
+            cross: arm-linux-androideabi-
+            cc: armv7a-linux-androideabi21-clang
             hostcc: "gcc -m32"
+            output: libluajit-v7.a
+            xflags: "-DLUAJIT_ENABLE_LUA52COMPAT"
 
           - arch: x86
-            ljarch: x86
-            clang: i686-linux-android21-clang
-            output: libluajit-x86.a
-            extra: "-DLUAJIT_ENABLE_LUA52COMPAT"
+            abi: x86
+            cross: i686-linux-android-
+            cc: i686-linux-android21-clang
             hostcc: "gcc -m32"
+            output: libluajit-x86.a
+            xflags: "-DLUAJIT_ENABLE_LUA52COMPAT"
 
           - arch: x86_64
-            ljarch: x64
-            clang: x86_64-linux-android21-clang
-            output: libluajit-x86_64.a
-            extra: "-DLUAJIT_ENABLE_GC64 -DLUAJIT_ENABLE_LUA52COMPAT"
+            abi: x86_64
+            cross: x86_64-linux-android-
+            cc: x86_64-linux-android21-clang
             hostcc: gcc
+            output: libluajit-x86_64.a
+            xflags: "-DLUAJIT_ENABLE_GC64 -DLUAJIT_ENABLE_LUA52COMPAT"
 
     steps:
       - name: Checkout the repo
@@ -67,37 +71,33 @@ jobs:
 
       - name: Compile LuaJIT
         run: |
-         TOOLCHAIN=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin
-    
-         case "${{ matrix.arch }}" in
-          arm64) ABI="arm64-v8a" ;;
-          armv7) ABI="armeabi-v7a" ;;
-          x86) ABI="x86" ;;
-          x86_64) ABI="x86_64" ;;
-         esac
-    
-         mkdir -p lib/lua/lib/Android/$ABI/
+          set -euo pipefail
 
-         cd luajit/src
-         make clean
-         make -j$(nproc) \
-           HOST_CC="${{ matrix.hostcc }}" \
-           CC="$TOOLCHAIN/${{ matrix.clang }}" \
-           TARGET_AR="$TOOLCHAIN/llvm-ar rcus" \
-           TARGET_STRIP="$TOOLCHAIN/llvm-strip" \
-           TARGET_SYS=Linux \
-           TARGET_LJARCH=${{ matrix.ljarch }} \
-           BUILDMODE=static \
-           TARGET_FLAGS="-fPIC -D__ANDROID__" \
-           XCFLAGS="${{ matrix.extra }} -fvisibility=default"
+          TOOLCHAIN="$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin"
+          mkdir -p "lib/lua/lib/Android"
 
-         cp libluajit.a ../../lib/lua/lib/Android/${{ matrix.output }}
+          cd luajit/src
+          make clean
+
+          make -j"$(nproc)" \
+            HOST_CC="${{ matrix.hostcc }}" \
+            CROSS="$TOOLCHAIN/${{ matrix.cross }}" \
+            STATIC_CC="$TOOLCHAIN/${{ matrix.cc }}" \
+            DYNAMIC_CC="$TOOLCHAIN/${{ matrix.cc }} -fPIC" \
+            TARGET_LD="$TOOLCHAIN/${{ matrix.cc }}" \
+            TARGET_AR="$TOOLCHAIN/llvm-ar rcus" \
+            TARGET_STRIP="$TOOLCHAIN/llvm-strip" \
+            TARGET_SYS=Linux \
+            BUILDMODE=static \
+            XCFLAGS="${{ matrix.xflags }} -fvisibility=default"
+
+          cp src/libluajit.a "../../lib/lua/lib/Android/${{ matrix.output }}"
 
       - name: Show files
         run: |
-         echo "FILES:"
-         find lib/lua/lib/Android -type f
-    
+          echo "FILES:"
+          find lib/lua/lib/Android -type f
+
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
@@ -129,7 +129,7 @@ jobs:
           git add lib/lua/lib/Android/*.a
 
           if git diff --cached --quiet; then
-            echo No changes
+            echo "No changes"
           else
             git commit -m "Update LuaJIT Android libs"
             git push
